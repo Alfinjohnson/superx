@@ -20,9 +20,9 @@ updates:
       - "dependencies"
       - "ci"
 
-  # Docker (root Dockerfile)
+  # Docker (orchestrator Dockerfile)
   - package-ecosystem: "docker"
-    directory: "/"
+    directory: "/orchestrator"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3

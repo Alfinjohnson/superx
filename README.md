@@ -14,7 +14,7 @@
 
 ---
 
-SuperX is a production-ready **Agentic Gateway Orchestrator** that implements the [Agent-to-Agent (A2A) Protocol v0.3.0](docs/a2a-v030/specification.md). It serves as a central hub for routing messages between AI agents, managing their lifecycles, and maintaining state across conversations.
+SuperX is an **experimental Agentic Gateway Orchestrator** that implements the [Agent-to-Agent (A2A) Protocol v0.3.0](docs/a2a-v030/specification.md). It serves as a central hub for routing messages between AI agents, managing their lifecycles, and maintaining state across conversations.
 
 ## Features
 
