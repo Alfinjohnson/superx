@@ -55,7 +55,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           body: ${{ steps.changelog.outputs.notes }}
           files: orchestrator/_build/prod/rel/orchestrator-${{ github.ref_name }}-linux-amd64.tar.gz
