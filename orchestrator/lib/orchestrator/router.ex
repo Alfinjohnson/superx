@@ -26,16 +26,21 @@ defmodule Orchestrator.Router do
 
   get "/health" do
     db_status =
-      case Orchestrator.Repo.query("SELECT 1") do
-        {:ok, _} -> "ok"
-        {:error, _} -> "error"
+      if Orchestrator.Persistence.memory?() do
+        "n/a"
+      else
+        case Orchestrator.Repo.query("SELECT 1") do
+          {:ok, _} -> "ok"
+          {:error, _} -> "error"
+        end
       end
 
     cluster = Cluster.status()
-    status = if db_status == "ok", do: "ok", else: "degraded"
+    status = if db_status in ["ok", "n/a"], do: "ok", else: "degraded"
 
     resp = %{
       status: status,
+      mode: if(Orchestrator.Persistence.memory?(), do: "memory", else: "postgres"),
       db: db_status,
       node: cluster.node,
       cluster_size: cluster.node_count,
