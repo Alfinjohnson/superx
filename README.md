@@ -1,7 +1,7 @@
 # SuperX - Agentic Gateway Orchestrator
 
 <p align="center">
-  <strong>A high-performance gateway for AI agent orchestration implementing the A2A Protocol</strong>
+  <strong>A high-performance gateway + orchestrator for AI agents with support for the A2A Protocol and more</strong>
 </p>
 
 <p align="center">
@@ -14,13 +14,13 @@
 
 ---
 
-SuperX is an **experimental Agentic Gateway Orchestrator** that implements the [Agent-to-Agent (A2A) Protocol v0.3.0](docs/a2a-v030/specification.md). It serves as a central hub for routing messages between AI agents, managing their lifecycles, and maintaining state across conversations.
+SuperX is an **experimental Agentic Gateway Orchestrator** that helps AI agents connect and communicate through a unified gateway. Currently supporting the [Agent-to-Agent (A2A) Protocol](https://github.com/google/A2A), with plans to add support for additional protocols in the future. It serves as a central hub for routing messages between AI agents, managing their lifecycles, and maintaining state across conversations.
 
 ## Features
 
 | Feature | Description |
 |---------|-------------|
-| **A2A Protocol v0.3.0** | Full implementation of the Agent-to-Agent protocol specification |
+| **A2A Protocol Support** | Full support for Google's Agent-to-Agent protocol (more protocols coming soon) |
 | **Intelligent Routing** | Route messages to agents based on skills, availability, and load |
 | **Task Management** | Create, track, and manage tasks with full state persistence |
 | **Streaming** | Real-time message streaming via Server-Sent Events (SSE) |
@@ -60,6 +60,48 @@ mix compile
 # Run with in-memory storage (no database required)
 $env:SUPERX_PERSISTENCE="memory"; mix run --no-halt
 ```
+
+### Configure Agents
+
+SuperX loads agents from a YAML configuration file. Create or modify `agents.yml`:
+
+```yaml
+# samples/agents.yml
+agents:
+  my_agent:
+    url: http://localhost:8001/a2a/my_agent      # A2A RPC endpoint of your agent
+    bearer: ""  # Optional: API token for authentication
+    protocol: a2a
+    protocolVersion: 0.3.0
+    metadata:
+      agentCard:
+        url: http://localhost:8001/a2a/my_agent/.well-known/agent-card.json
+        name: my_agent
+        description: Description of what this agent does
+        skills:
+          - id: skill_id
+            name: Skill Name
+            description: What this skill does
+```
+
+**URL Configuration:**
+- `url`: The A2A JSON-RPC endpoint of your agent server (e.g., `http://host:port/a2a/agent_name`)
+- `agentCard.url`: The agent card discovery endpoint (typically `{agent_url}/.well-known/agent-card.json`)
+
+> **Note:** You need an A2A-compatible agent server running at the specified URL. See the [Google A2A Python samples](https://github.com/google/A2A/tree/main/samples/python) to learn how to build an agent.
+
+Set the `SUPERX_AGENTS_FILE` environment variable to load your agents:
+
+```bash
+# Using environment variable
+$env:SUPERX_AGENTS_FILE="./samples/agents.yml"; mix run --no-halt
+
+# Or in docker-compose.yml
+environment:
+  - SUPERX_AGENTS_FILE=/app/config/agents.yml
+```
+
+See [samples/agents.yml](samples/agents.yml) for a complete example.
 
 ### Verify Installation
 
@@ -237,8 +279,8 @@ superx/
 │   ├── test/              # Test suite (210 tests)
 │   ├── priv/              # Migrations and static assets
 │   └── docs/              # Developer documentation
-├── docs/                  # Protocol specifications
-│   └── a2a-v030/         # A2A v0.3.0 spec and tutorials
+├── docs/                  # Project documentation
+│   └── roadmap.md        # Development roadmap
 ├── samples/              # Sample configurations
 │   └── agents.yml        # Example agent configuration
 ├── Dockerfile            # Production container build
@@ -264,9 +306,9 @@ superx/
 
 ### Protocol Specification
 
-- **[A2A Protocol v0.3.0](docs/a2a-v030/specification.md)** - Full protocol specification
-- **[Key Concepts](docs/a2a-v030/topics/key-concepts.md)** - Core protocol concepts
-- **[Tutorials](docs/a2a-v030/tutorials/index.md)** - Step-by-step guides
+- **[A2A Protocol](https://github.com/google/A2A)** - Google's Agent-to-Agent protocol specification
+- **[A2A Documentation](https://google.github.io/A2A/)** - Official protocol documentation
+- **[A2A Python Samples](https://github.com/google/A2A/tree/main/samples/python)** - Example agent implementations
 
 ## Tech Stack
 

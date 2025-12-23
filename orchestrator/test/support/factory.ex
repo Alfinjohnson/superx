@@ -10,6 +10,11 @@ defmodule Orchestrator.Factory do
   # Task Records (for database)
   # -------------------------------------------------------------------
 
+  # Specific 2-arity builds must come before the generic catch-all
+  def build(:sse_event, %{result: result}) do
+    "data: #{Jason.encode!(%{"jsonrpc" => "2.0", "result" => result})}\n\n"
+  end
+
   def build(factory_name, attrs) do
     factory_name
     |> build()
@@ -282,10 +287,6 @@ defmodule Orchestrator.Factory do
 
   def build(:sse_event) do
     result = build(:sse_status_update)
-    "data: #{Jason.encode!(%{"jsonrpc" => "2.0", "result" => result})}\n\n"
-  end
-
-  def build(:sse_event, %{result: result}) do
     "data: #{Jason.encode!(%{"jsonrpc" => "2.0", "result" => result})}\n\n"
   end
 
