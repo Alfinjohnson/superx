@@ -17,8 +17,6 @@ defmodule Orchestrator.Agent.Loader do
   Called on application startup.
   """
   def load_all do
-    agents_loaded = 0
-
     # 1. Load from YAML file
     yaml_count = load_from_yaml()
 
@@ -29,7 +27,11 @@ defmodule Orchestrator.Agent.Loader do
     env_count = load_from_env()
 
     total = yaml_count + config_count + env_count
-    Logger.info("Agent loader: loaded #{total} agents (yaml: #{yaml_count}, config: #{config_count}, env: #{env_count})")
+
+    Logger.info(
+      "Agent loader: loaded #{total} agents (yaml: #{yaml_count}, config: #{config_count}, env: #{env_count})"
+    )
+
     {:ok, total}
   end
 
@@ -52,6 +54,7 @@ defmodule Orchestrator.Agent.Loader do
                 Store.upsert(agent)
                 Logger.debug("Loaded agent from YAML: #{id}")
               end)
+
               map_size(agents)
 
             {:ok, _} ->
@@ -78,6 +81,7 @@ defmodule Orchestrator.Agent.Loader do
         Store.upsert(agent)
         Logger.debug("Loaded agent from config: #{id}")
       end)
+
       map_size(agents)
     else
       0
@@ -96,6 +100,7 @@ defmodule Orchestrator.Agent.Loader do
           "bearer" => System.get_env("A2A_REMOTE_BEARER"),
           "metadata" => %{"source" => "environment"}
         }
+
         Store.upsert(agent)
         Logger.debug("Loaded default agent from A2A_REMOTE_URL")
         1

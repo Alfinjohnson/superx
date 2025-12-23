@@ -69,7 +69,7 @@ defmodule Orchestrator.Application do
 
   defp port do
     Application.get_env(:orchestrator, :port, nil) ||
-      (System.get_env("PORT", "4000") |> String.to_integer())
+      System.get_env("PORT", "4000") |> String.to_integer()
   end
 
   defp cluster_topologies do
@@ -84,7 +84,8 @@ defmodule Orchestrator.Application do
         ]
 
       "dns" ->
-        polling_interval = Application.get_env(:orchestrator, :cluster, [])
+        polling_interval =
+          Application.get_env(:orchestrator, :cluster, [])
           |> Keyword.get(:dns_polling_interval, 5_000)
 
         [

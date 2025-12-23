@@ -58,7 +58,10 @@ defmodule Orchestrator.Infra.PushNotifierTest do
         conn |> Plug.Conn.send_resp(200, "")
       end)
 
-      payload = %{"statusUpdate" => %{"taskId" => "task-123", "status" => %{"state" => "working"}}}
+      payload = %{
+        "statusUpdate" => %{"taskId" => "task-123", "status" => %{"state" => "working"}}
+      }
+
       cfg = %{"url" => "http://test.local/webhook"}
 
       deliver_with_stub(payload, cfg)
@@ -147,7 +150,9 @@ defmodule Orchestrator.Infra.PushNotifierTest do
       deliver_with_stub(payload, cfg)
 
       # Should receive multiple telemetry events, last one is max_attempts
-      assert_receive {:telemetry, [:orchestrator, :push, :push_failure], _m, %{reason: :max_attempts}}, 5000
+      assert_receive {:telemetry, [:orchestrator, :push, :push_failure], _m,
+                      %{reason: :max_attempts}},
+                     5000
     end
 
     test "succeeds on retry after initial failure" do
@@ -252,6 +257,7 @@ defmodule Orchestrator.Infra.PushNotifierTest do
 
       # Verify HMAC computation
       expected_data = timestamp <> "." <> body
+
       expected_signature =
         :crypto.mac(:hmac, :sha256, secret, expected_data)
         |> Base.encode16(case: :lower)
@@ -366,6 +372,7 @@ defmodule Orchestrator.Infra.PushNotifierTest do
       end)
 
       payload = Factory.build(:status_update_payload)
+
       cfg = %{
         "url" => "http://test.local/webhook",
         "jwtSecret" => "jwt-secret",
@@ -387,6 +394,7 @@ defmodule Orchestrator.Infra.PushNotifierTest do
         [header_b64, payload_b64, signature_b64] = String.split(token, ".")
 
         signing_input = header_b64 <> "." <> payload_b64
+
         expected_signature =
           :crypto.mac(:hmac, :sha256, secret, signing_input)
           |> Base.url_encode64(padding: false)
@@ -427,7 +435,8 @@ defmodule Orchestrator.Infra.PushNotifierTest do
 
       deliver_with_stub(payload, cfg)
 
-      assert_receive {:telemetry, [:orchestrator, :push, :push_start], _m, %{task_id: "task-from-status"}}
+      assert_receive {:telemetry, [:orchestrator, :push, :push_start], _m,
+                      %{task_id: "task-from-status"}}
     end
 
     test "extracts task ID from artifactUpdate payload" do
@@ -440,7 +449,8 @@ defmodule Orchestrator.Infra.PushNotifierTest do
 
       deliver_with_stub(payload, cfg)
 
-      assert_receive {:telemetry, [:orchestrator, :push, :push_start], _m, %{task_id: "task-from-artifact"}}
+      assert_receive {:telemetry, [:orchestrator, :push, :push_start], _m,
+                      %{task_id: "task-from-artifact"}}
     end
 
     test "extracts task ID from task payload" do
@@ -453,7 +463,8 @@ defmodule Orchestrator.Infra.PushNotifierTest do
 
       deliver_with_stub(payload, cfg)
 
-      assert_receive {:telemetry, [:orchestrator, :push, :push_start], _m, %{task_id: "task-from-task"}}
+      assert_receive {:telemetry, [:orchestrator, :push, :push_start], _m,
+                      %{task_id: "task-from-task"}}
     end
 
     test "task ID is nil for unknown payload structure" do
@@ -516,16 +527,30 @@ defmodule Orchestrator.Infra.PushNotifierTest do
 
     case result do
       {:ok, %{status: status}} when status in 200..299 ->
-        emit_push_telemetry(:push_success, %{task_id: task_id, url: url, attempt: attempt, status: status})
+        emit_push_telemetry(:push_success, %{
+          task_id: task_id,
+          url: url,
+          attempt: attempt,
+          status: status
+        })
+
         :ok
 
       {:ok, %{status: status}} when status >= 500 ->
         # Exponential backoff: 200ms, 400ms, 800ms
-        Process.sleep(trunc(:math.pow(2, attempt - 1) * 10))  # Reduced for tests
+        # Reduced for tests
+        Process.sleep(trunc(:math.pow(2, attempt - 1) * 10))
         do_post_test(body, url, headers, attempt + 1, task_id)
 
       {:ok, %{status: status}} ->
-        emit_push_telemetry(:push_failure, %{task_id: task_id, url: url, attempt: attempt, status: status, reason: :client_error})
+        emit_push_telemetry(:push_failure, %{
+          task_id: task_id,
+          url: url,
+          attempt: attempt,
+          status: status,
+          reason: :client_error
+        })
+
         {:error, {:http_error, status}}
 
       {:error, _err} ->
@@ -535,7 +560,13 @@ defmodule Orchestrator.Infra.PushNotifierTest do
   end
 
   defp do_post_test(_body, url, _headers, attempt, task_id) when attempt > 3 do
-    emit_push_telemetry(:push_failure, %{task_id: task_id, url: url, attempt: attempt, reason: :max_attempts})
+    emit_push_telemetry(:push_failure, %{
+      task_id: task_id,
+      url: url,
+      attempt: attempt,
+      reason: :max_attempts
+    })
+
     {:error, :max_attempts}
   end
 
@@ -553,10 +584,14 @@ defmodule Orchestrator.Infra.PushNotifierTest do
   end
 
   defp maybe_auth_token_test(headers, %{"token" => nil}), do: headers
-  defp maybe_auth_token_test(headers, %{"token" => token}) when is_binary(token), do: [{"x-a2a-token", token} | headers]
+
+  defp maybe_auth_token_test(headers, %{"token" => token}) when is_binary(token),
+    do: [{"x-a2a-token", token} | headers]
+
   defp maybe_auth_token_test(headers, _cfg), do: headers
 
-  defp maybe_hmac_test(headers, %{"hmacSecret" => secret}, body) when is_binary(secret) and secret != "" do
+  defp maybe_hmac_test(headers, %{"hmacSecret" => secret}, body)
+       when is_binary(secret) and secret != "" do
     ts = System.system_time(:second)
     data = Integer.to_string(ts) <> "." <> body
     signature = :crypto.mac(:hmac, :sha256, secret, data) |> Base.encode16(case: :lower)
@@ -566,7 +601,8 @@ defmodule Orchestrator.Infra.PushNotifierTest do
 
   defp maybe_hmac_test(headers, _cfg, _body), do: headers
 
-  defp maybe_jwt_test(headers, %{"jwtSecret" => secret} = cfg, body) when is_binary(secret) and secret != "" do
+  defp maybe_jwt_test(headers, %{"jwtSecret" => secret} = cfg, body)
+       when is_binary(secret) and secret != "" do
     case sign_jwt_test(secret, cfg, body) do
       {:ok, token} -> [{"authorization", "Bearer " <> token} | headers]
       {:error, _} -> headers
@@ -581,20 +617,27 @@ defmodule Orchestrator.Infra.PushNotifierTest do
     header_b64 = header |> Jason.encode!() |> Base.url_encode64(padding: false)
 
     now = System.system_time(:second)
+
     payload = %{
       "iat" => now,
       "exp" => now + 300,
       "nbf" => now - 120,
       "hash" => Base.encode16(:crypto.hash(:sha256, body), case: :lower)
     }
+
     payload = if cfg["jwtIssuer"], do: Map.put(payload, "iss", cfg["jwtIssuer"]), else: payload
-    payload = if cfg["jwtAudience"], do: Map.put(payload, "aud", cfg["jwtAudience"]), else: payload
+
+    payload =
+      if cfg["jwtAudience"], do: Map.put(payload, "aud", cfg["jwtAudience"]), else: payload
+
     payload = if cfg["taskId"], do: Map.put(payload, "taskId", cfg["taskId"]), else: payload
 
     payload_b64 = payload |> Jason.encode!() |> Base.url_encode64(padding: false)
 
     signing_input = header_b64 <> "." <> payload_b64
-    signature = :crypto.mac(:hmac, :sha256, secret, signing_input) |> Base.url_encode64(padding: false)
+
+    signature =
+      :crypto.mac(:hmac, :sha256, secret, signing_input) |> Base.url_encode64(padding: false)
 
     {:ok, signing_input <> "." <> signature}
   end

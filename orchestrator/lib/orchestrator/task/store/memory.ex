@@ -48,7 +48,9 @@ defmodule Orchestrator.Task.Store.Memory do
   @spec subscribe(String.t()) :: map() | nil
   def subscribe(task_id) do
     case get(task_id) do
-      nil -> nil
+      nil ->
+        nil
+
       task ->
         TaskPubSub.subscribe(task_id)
         task

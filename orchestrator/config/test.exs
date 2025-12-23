@@ -22,8 +22,7 @@ config :orchestrator,
   agents: %{}
 
 # Disable push notifications in tests
-config :orchestrator, :push_notifications,
-  enabled: false
+config :orchestrator, :push_notifications, enabled: false
 
 # Use shorter timeouts in tests
 config :orchestrator, :http_client,

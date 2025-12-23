@@ -12,14 +12,17 @@ defmodule Orchestrator.Router do
   alias Orchestrator.Task.PushConfig
   alias Orchestrator.Utils
 
-  plug :request_id
-  plug Plug.Logger
-  plug Plug.Parsers,
+  plug(:request_id)
+  plug(Plug.Logger)
+
+  plug(Plug.Parsers,
     parsers: [:json],
     json_decoder: Jason,
     pass: ["*/*"]
-  plug :match
-  plug :dispatch
+  )
+
+  plug(:match)
+  plug(:dispatch)
 
   get "/health" do
     db_status =
@@ -79,7 +82,15 @@ defmodule Orchestrator.Router do
         proxy_a2a_request(conn, agent_id, id, method, payload)
 
       _ ->
-        send_resp(conn, 400, Jason.encode!(%{"jsonrpc" => "2.0", "id" => nil, "error" => %{code: -32600, message: "Invalid Request"}}))
+        send_resp(
+          conn,
+          400,
+          Jason.encode!(%{
+            "jsonrpc" => "2.0",
+            "id" => nil,
+            "error" => %{code: -32600, message: "Invalid Request"}
+          })
+        )
     end
   end
 
@@ -93,18 +104,42 @@ defmodule Orchestrator.Router do
          env = build_envelope("send", params, id, agent_id),
          {:ok, forwarded} <- AgentWorker.call(agent_id, env) do
       maybe_store_task(forwarded)
-      send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => forwarded}))
+
+      send_resp(
+        conn,
+        200,
+        Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => forwarded})
+      )
     else
-      {:error, :no_agent} -> send_error(conn, id, -32602, "agentId is required")
-      {:error, :agent_missing} -> send_error(conn, id, -32001, "Agent not found")
-      {:error, :agent_not_found} -> send_error(conn, id, -32001, "Agent not found")
-      {:error, :circuit_open} -> send_error(conn, id, -32002, "Agent circuit breaker open")
-      {:error, :too_many_requests} -> send_error(conn, id, -32003, "Agent overloaded")
-      {:error, {:remote, status, body}} -> send_error(conn, id, -32099, "Remote agent error #{status}: #{inspect(body)}")
-      {:error, :decode} -> send_error(conn, id, -32700, "Invalid JSON from remote agent")
-      {:error, :timeout} -> send_error(conn, id, -32098, "Agent call timed out")
-      {:error, %{"code" => code, "message" => msg}} -> send_error(conn, id, code, msg)
-      {:error, other} -> send_error(conn, id, -32099, "Unknown error: #{inspect(other)}")
+      {:error, :no_agent} ->
+        send_error(conn, id, -32602, "agentId is required")
+
+      {:error, :agent_missing} ->
+        send_error(conn, id, -32001, "Agent not found")
+
+      {:error, :agent_not_found} ->
+        send_error(conn, id, -32001, "Agent not found")
+
+      {:error, :circuit_open} ->
+        send_error(conn, id, -32002, "Agent circuit breaker open")
+
+      {:error, :too_many_requests} ->
+        send_error(conn, id, -32003, "Agent overloaded")
+
+      {:error, {:remote, status, body}} ->
+        send_error(conn, id, -32099, "Remote agent error #{status}: #{inspect(body)}")
+
+      {:error, :decode} ->
+        send_error(conn, id, -32700, "Invalid JSON from remote agent")
+
+      {:error, :timeout} ->
+        send_error(conn, id, -32098, "Agent call timed out")
+
+      {:error, %{"code" => code, "message" => msg}} ->
+        send_error(conn, id, code, msg)
+
+      {:error, other} ->
+        send_error(conn, id, -32099, "Unknown error: #{inspect(other)}")
     end
   end
 
@@ -116,7 +151,12 @@ defmodule Orchestrator.Router do
       receive do
         {:stream_init, ^id, result} ->
           maybe_store_task(result)
-          send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => result}))
+
+          send_resp(
+            conn,
+            200,
+            Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => result})
+          )
 
         {:stream_error, ^id, status} ->
           send_error(conn, id, -32099, "Remote stream error #{status}")
@@ -124,16 +164,35 @@ defmodule Orchestrator.Router do
         5_000 -> send_error(conn, id, -32098, "Stream initialization timed out")
       end
     else
-      {:error, :no_agent} -> send_error(conn, id, -32602, "agentId is required")
-      {:error, :agent_missing} -> send_error(conn, id, -32001, "Agent not found")
-      {:error, :agent_not_found} -> send_error(conn, id, -32001, "Agent not found")
-      {:error, :circuit_open} -> send_error(conn, id, -32002, "Agent circuit breaker open")
-      {:error, :too_many_requests} -> send_error(conn, id, -32003, "Agent overloaded")
-      {:error, {:remote, status, body}} -> send_error(conn, id, -32099, "Remote agent error #{status}: #{inspect(body)}")
-      {:error, :decode} -> send_error(conn, id, -32700, "Invalid JSON from remote agent")
-      {:error, :timeout} -> send_error(conn, id, -32098, "Stream initialization timed out")
-      {:error, %{"code" => code, "message" => msg}} -> send_error(conn, id, code, msg)
-      {:error, other} -> send_error(conn, id, -32099, "Unknown error: #{inspect(other)}")
+      {:error, :no_agent} ->
+        send_error(conn, id, -32602, "agentId is required")
+
+      {:error, :agent_missing} ->
+        send_error(conn, id, -32001, "Agent not found")
+
+      {:error, :agent_not_found} ->
+        send_error(conn, id, -32001, "Agent not found")
+
+      {:error, :circuit_open} ->
+        send_error(conn, id, -32002, "Agent circuit breaker open")
+
+      {:error, :too_many_requests} ->
+        send_error(conn, id, -32003, "Agent overloaded")
+
+      {:error, {:remote, status, body}} ->
+        send_error(conn, id, -32099, "Remote agent error #{status}: #{inspect(body)}")
+
+      {:error, :decode} ->
+        send_error(conn, id, -32700, "Invalid JSON from remote agent")
+
+      {:error, :timeout} ->
+        send_error(conn, id, -32098, "Stream initialization timed out")
+
+      {:error, %{"code" => code, "message" => msg}} ->
+        send_error(conn, id, code, msg)
+
+      {:error, other} ->
+        send_error(conn, id, -32099, "Unknown error: #{inspect(other)}")
     end
   end
 
@@ -144,15 +203,21 @@ defmodule Orchestrator.Router do
 
   defp handle_rpc(conn, id, "agents.get", %{"id" => agent_id}) do
     case AgentStore.fetch(agent_id) do
-      nil -> send_error(conn, id, -32010, "Agent not found")
-      agent -> send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => agent}))
+      nil ->
+        send_error(conn, id, -32010, "Agent not found")
+
+      agent ->
+        send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => agent}))
     end
   end
 
   defp handle_rpc(conn, id, "agents.upsert", %{"agent" => agent}) do
     case AgentStore.upsert(agent) do
-      {:ok, stored} -> send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => stored}))
-      {:error, :invalid} -> send_error(conn, id, -32602, "Invalid agent payload (id and url required)")
+      {:ok, stored} ->
+        send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => stored}))
+
+      {:error, :invalid} ->
+        send_error(conn, id, -32602, "Invalid agent payload (id and url required)")
     end
   end
 
@@ -163,18 +228,30 @@ defmodule Orchestrator.Router do
 
   defp handle_rpc(conn, id, "agents.refreshCard", %{"id" => agent_id}) do
     case AgentStore.refresh_card(agent_id) do
-      {:ok, agent} -> send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => agent}))
-      {:error, :not_found} -> send_error(conn, id, -32010, "Agent not found")
-      {:error, :invalid_url} -> send_error(conn, id, -32602, "Invalid agent url for card fetch")
-      {:error, {:http_status, status}} -> send_error(conn, id, -32099, "Agent card fetch failed status=#{status}")
-      {:error, _} -> send_error(conn, id, -32099, "Agent card fetch failed")
+      {:ok, agent} ->
+        send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => agent}))
+
+      {:error, :not_found} ->
+        send_error(conn, id, -32010, "Agent not found")
+
+      {:error, :invalid_url} ->
+        send_error(conn, id, -32602, "Invalid agent url for card fetch")
+
+      {:error, {:http_status, status}} ->
+        send_error(conn, id, -32099, "Agent card fetch failed status=#{status}")
+
+      {:error, _} ->
+        send_error(conn, id, -32099, "Agent card fetch failed")
     end
   end
 
   defp handle_rpc(conn, id, "agents.health", %{"id" => agent_id}) do
     case AgentWorker.health(agent_id) do
-      {:ok, health} -> send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => health}))
-      {:error, :agent_not_found} -> send_error(conn, id, -32010, "Agent not found")
+      {:ok, health} ->
+        send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => health}))
+
+      {:error, :agent_not_found} ->
+        send_error(conn, id, -32010, "Agent not found")
     end
   end
 
@@ -194,8 +271,11 @@ defmodule Orchestrator.Router do
 
   defp handle_rpc(conn, id, "tasks.get", %{"taskId" => task_id}) do
     case TaskStore.get(task_id) do
-      nil -> send_error(conn, id, -32004, "Task not found")
-      task -> send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => task}))
+      nil ->
+        send_error(conn, id, -32004, "Task not found")
+
+      task ->
+        send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => task}))
     end
   end
 
@@ -203,21 +283,39 @@ defmodule Orchestrator.Router do
     stream_task(conn, id, task_id)
   end
 
-  defp handle_rpc(conn, id, "tasks.pushNotificationConfig.set", %{"taskId" => task_id, "config" => cfg}) do
+  defp handle_rpc(conn, id, "tasks.pushNotificationConfig.set", %{
+         "taskId" => task_id,
+         "config" => cfg
+       }) do
     case TaskStore.get(task_id) do
-      nil -> send_error(conn, id, -32004, "Task not found")
+      nil ->
+        send_error(conn, id, -32004, "Task not found")
+
       _task ->
         case PushConfig.set(task_id, cfg) do
-          {:ok, saved} -> send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => saved}))
-          {:error, :invalid} -> send_error(conn, id, -32602, "Invalid push config")
+          {:ok, saved} ->
+            send_resp(
+              conn,
+              200,
+              Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => saved})
+            )
+
+          {:error, :invalid} ->
+            send_error(conn, id, -32602, "Invalid push config")
         end
     end
   end
 
-  defp handle_rpc(conn, id, "tasks.pushNotificationConfig.get", %{"taskId" => task_id, "configId" => config_id}) do
+  defp handle_rpc(conn, id, "tasks.pushNotificationConfig.get", %{
+         "taskId" => task_id,
+         "configId" => config_id
+       }) do
     case PushConfig.get(task_id, config_id) do
-      nil -> send_error(conn, id, -32004, "Push notification config not found")
-      cfg -> send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => cfg}))
+      nil ->
+        send_error(conn, id, -32004, "Push notification config not found")
+
+      cfg ->
+        send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => cfg}))
     end
   end
 
@@ -226,7 +324,10 @@ defmodule Orchestrator.Router do
     send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => cfgs}))
   end
 
-  defp handle_rpc(conn, id, "tasks.pushNotificationConfig.delete", %{"taskId" => task_id, "configId" => config_id}) do
+  defp handle_rpc(conn, id, "tasks.pushNotificationConfig.delete", %{
+         "taskId" => task_id,
+         "configId" => config_id
+       }) do
     PushConfig.delete(task_id, config_id)
     send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => true}))
   end
@@ -280,7 +381,9 @@ defmodule Orchestrator.Router do
 
   defp stream_task(conn, id, task_id) do
     case TaskStore.subscribe(task_id) do
-      nil -> send_error(conn, id, -32004, "Task not found")
+      nil ->
+        send_error(conn, id, -32004, "Task not found")
+
       task ->
         conn =
           conn
@@ -303,7 +406,8 @@ defmodule Orchestrator.Router do
           loop_events(conn, id, task_id)
         end
 
-      {:halt, _} -> Plug.Conn.halt(conn)
+      {:halt, _} ->
+        Plug.Conn.halt(conn)
     after
       15_000 ->
         # keep-alive comment to prevent idle timeouts
@@ -392,7 +496,11 @@ defmodule Orchestrator.Router do
         send_resp(conn, 200, Jason.encode!(card))
 
       {:ok, %{status: status}} ->
-        send_resp(conn, status, Jason.encode!(%{error: "Failed to fetch agent card", status: status}))
+        send_resp(
+          conn,
+          status,
+          Jason.encode!(%{error: "Failed to fetch agent card", status: status})
+        )
 
       {:error, reason} ->
         Logger.warning("Failed to fetch agent card from #{card_url}: #{inspect(reason)}")
@@ -487,7 +595,11 @@ defmodule Orchestrator.Router do
     case Req.post(url, json: payload, finch: Orchestrator.Finch, receive_timeout: 30_000) do
       {:ok, %{status: 200, body: %{"error" => error}}} ->
         # Remote agent returned an error - pass it through
-        send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => rpc_id, "error" => error}))
+        send_resp(
+          conn,
+          200,
+          Jason.encode!(%{"jsonrpc" => "2.0", "id" => rpc_id, "error" => error})
+        )
 
       {:ok, %{status: 200, body: body}} ->
         send_resp(conn, 200, Jason.encode!(body))

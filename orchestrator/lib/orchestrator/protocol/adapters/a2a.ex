@@ -137,18 +137,19 @@ defmodule Orchestrator.Protocol.Adapters.A2A do
   def decode(wire) when is_map(wire) do
     canonical = normalize_method(wire["method"])
 
-    env = Envelope.new(%{
-      protocol: @protocol_name,
-      version: @protocol_version,
-      method: canonical,
-      task_id: get_in(wire, ["params", "id"]) || get_in(wire, ["params", "taskId"]),
-      context_id: get_in(wire, ["params", "contextId"]),
-      message: get_in(wire, ["params", "message"]),
-      payload: wire["params"],
-      rpc_id: wire["id"],
-      agent_id: get_in(wire, ["params", "agentId"]),
-      metadata: get_in(wire, ["params", "metadata"])
-    })
+    env =
+      Envelope.new(%{
+        protocol: @protocol_name,
+        version: @protocol_version,
+        method: canonical,
+        task_id: get_in(wire, ["params", "id"]) || get_in(wire, ["params", "taskId"]),
+        context_id: get_in(wire, ["params", "contextId"]),
+        message: get_in(wire, ["params", "message"]),
+        payload: wire["params"],
+        rpc_id: wire["id"],
+        agent_id: get_in(wire, ["params", "agentId"]),
+        metadata: get_in(wire, ["params", "metadata"])
+      })
 
     {:ok, env}
   end
@@ -259,6 +260,7 @@ defmodule Orchestrator.Protocol.Adapters.A2A do
   defp normalize_capabilities(caps) when is_map(caps), do: caps
 
   defp normalize_skills(nil), do: []
+
   defp normalize_skills(skills) when is_list(skills) do
     Enum.map(skills, fn skill ->
       skill

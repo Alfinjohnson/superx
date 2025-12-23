@@ -88,7 +88,9 @@ defmodule Orchestrator.Infra.HttpClientTest do
 
       post_json_with_stub(%{"test" => "payload"})
 
-      assert_receive {:telemetry, [:orchestrator, :http, :request], %{duration_ms: duration}, meta}
+      assert_receive {:telemetry, [:orchestrator, :http, :request], %{duration_ms: duration},
+                      meta}
+
       assert duration >= 0
       assert meta.method == :post
       assert meta.status == 200
@@ -128,10 +130,11 @@ defmodule Orchestrator.Infra.HttpClientTest do
         |> Plug.Conn.send_resp(200, Jason.encode!(%{"auth_received" => length(auth) > 0}))
       end)
 
-      result = post_json_with_stub(
-        %{"test" => "payload"},
-        headers: [{"authorization", "Bearer test-token"}]
-      )
+      result =
+        post_json_with_stub(
+          %{"test" => "payload"},
+          headers: [{"authorization", "Bearer test-token"}]
+        )
 
       assert {:ok, %{"auth_received" => true}} = result
     end

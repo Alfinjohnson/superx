@@ -85,6 +85,7 @@ defmodule Orchestrator.Agent.Worker do
   @spec call(String.t(), Envelope.t(), timeout()) :: {:ok, map()} | {:error, term()}
   def call(agent_id, %Envelope{} = env, timeout \\ nil) do
     timeout = timeout || default_call_timeout()
+
     with {:ok, _pid} <- ensure_started(agent_id) do
       GenServer.call(via(agent_id), {:call, env}, timeout)
     end
@@ -94,6 +95,7 @@ defmodule Orchestrator.Agent.Worker do
   @spec stream(String.t(), Envelope.t(), pid(), timeout()) :: {:ok, :streaming} | {:error, term()}
   def stream(agent_id, %Envelope{} = env, reply_to, timeout \\ nil) do
     timeout = timeout || default_call_timeout()
+
     with {:ok, _pid} <- ensure_started(agent_id) do
       GenServer.call(via(agent_id), {:stream, env, reply_to}, timeout)
     end

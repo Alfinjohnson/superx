@@ -32,7 +32,7 @@ defmodule Orchestrator.Schema.Task do
 
   @primary_key {:id, :string, autogenerate: false}
   schema "tasks" do
-    field :payload, :map
+    field(:payload, :map)
     timestamps()
   end
 

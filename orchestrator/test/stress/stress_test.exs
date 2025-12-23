@@ -27,7 +27,8 @@ defmodule Orchestrator.StressTest do
   @concurrent_tasks 100
   @concurrent_agents 50
   @rapid_fire_count 500
-  @sustained_load_duration_ms 2_000  # Reduced from 5s to 2s
+  # Reduced from 5s to 2s
+  @sustained_load_duration_ms 2_000
 
   describe "Task Store stress" do
     @tag timeout: 60_000
@@ -36,8 +37,9 @@ defmodule Orchestrator.StressTest do
         1..@concurrent_tasks
         |> Enum.map(fn i ->
           Task.async(fn ->
-            task_payload = Factory.build(:task_payload)
-            |> Map.put("id", "stress-task-#{i}-#{unique_id()}")
+            task_payload =
+              Factory.build(:task_payload)
+              |> Map.put("id", "stress-task-#{i}-#{unique_id()}")
 
             start_time = System.monotonic_time(:microsecond)
             :ok = TaskStore.put(task_payload)
@@ -65,6 +67,7 @@ defmodule Orchestrator.StressTest do
 
       # Verify tasks exist
       sample_ids = results |> Enum.take(10) |> Enum.map(fn {id, _} -> id end)
+
       for id <- sample_ids do
         assert TaskStore.get(id) != nil
       end
@@ -75,8 +78,9 @@ defmodule Orchestrator.StressTest do
       {create_time, task_ids} =
         :timer.tc(fn ->
           Enum.map(1..@rapid_fire_count, fn i ->
-            task_payload = Factory.build(:task_payload)
-            |> Map.put("id", "rapid-#{i}-#{unique_id()}")
+            task_payload =
+              Factory.build(:task_payload)
+              |> Map.put("id", "rapid-#{i}-#{unique_id()}")
 
             :ok = TaskStore.put(task_payload)
             task_payload["id"]
@@ -101,9 +105,18 @@ defmodule Orchestrator.StressTest do
         end)
 
       IO.puts("\n📊 Rapid Fire Stats (#{@rapid_fire_count} operations):")
-      IO.puts("   Create: #{Float.round(create_time / 1000, 2)}ms total, #{Float.round(create_time / @rapid_fire_count, 2)}µs/op")
-      IO.puts("   Read:   #{Float.round(read_time / 1000, 2)}ms total, #{Float.round(read_time / @rapid_fire_count, 2)}µs/op")
-      IO.puts("   Update: #{Float.round(update_time / 1000, 2)}ms total, #{Float.round(update_time / @rapid_fire_count, 2)}µs/op")
+
+      IO.puts(
+        "   Create: #{Float.round(create_time / 1000, 2)}ms total, #{Float.round(create_time / @rapid_fire_count, 2)}µs/op"
+      )
+
+      IO.puts(
+        "   Read:   #{Float.round(read_time / 1000, 2)}ms total, #{Float.round(read_time / @rapid_fire_count, 2)}µs/op"
+      )
+
+      IO.puts(
+        "   Update: #{Float.round(update_time / 1000, 2)}ms total, #{Float.round(update_time / @rapid_fire_count, 2)}µs/op"
+      )
 
       # Verify final state
       sample_task = TaskStore.get(List.first(task_ids))
@@ -140,10 +153,12 @@ defmodule Orchestrator.StressTest do
               2 ->
                 # Update existing
                 id = Enum.random(existing_ids)
+
                 TaskStore.apply_status_update(%{
                   "taskId" => id,
                   "status" => %{"state" => "working", "progress" => :rand.uniform(100)}
                 })
+
                 {:update, id}
 
               3 ->
@@ -176,8 +191,9 @@ defmodule Orchestrator.StressTest do
         1..@concurrent_agents
         |> Enum.map(fn i ->
           Task.async(fn ->
-            agent = Factory.build(:agent_map)
-            |> Map.put("id", "stress-agent-#{i}-#{unique_id()}")
+            agent =
+              Factory.build(:agent_map)
+              |> Map.put("id", "stress-agent-#{i}-#{unique_id()}")
 
             start_time = System.monotonic_time(:microsecond)
             AgentStore.upsert(agent)
@@ -200,6 +216,7 @@ defmodule Orchestrator.StressTest do
       # Verify agents exist
       all_agents = AgentStore.list()
       registered_ids = Enum.map(results, fn {id, _} -> id end)
+
       for id <- Enum.take(registered_ids, 5) do
         assert Enum.any?(all_agents, fn a -> a["id"] == id end)
       end
@@ -248,9 +265,10 @@ defmodule Orchestrator.StressTest do
       # Inject failures rapidly
       failure_count = 50
 
-      final_state = Enum.reduce(1..failure_count, state, fn _, acc ->
-        inject_failure(acc)
-      end)
+      final_state =
+        Enum.reduce(1..failure_count, state, fn _, acc ->
+          inject_failure(acc)
+        end)
 
       IO.puts("\n📊 Circuit Breaker Stress Stats:")
       IO.puts("   Injected failures: #{failure_count}")
@@ -269,7 +287,8 @@ defmodule Orchestrator.StressTest do
         failure_window_start: System.monotonic_time(:millisecond),
         failure_window_ms: 30_000,
         failure_threshold: 5,
-        cooldown_ms: 50,  # Very short for test
+        # Very short for test
+        cooldown_ms: 50,
         cooldown_until: nil,
         last_failure_at: nil,
         agent_id: "recovery-test"
@@ -364,12 +383,18 @@ defmodule Orchestrator.StressTest do
         Enum.map(1..concurrent, fn i ->
           Task.async(fn ->
             case rem(i, 3) do
-              0 -> {:read, TaskStore.get(task_id)}
-              1 -> {:update, TaskStore.apply_status_update(%{
-                "taskId" => task_id,
-                "status" => %{"state" => "working", "progress" => rem(i, 100)}
-              })}
-              2 -> {:subscribe, TaskStore.subscribe(task_id)}
+              0 ->
+                {:read, TaskStore.get(task_id)}
+
+              1 ->
+                {:update,
+                 TaskStore.apply_status_update(%{
+                   "taskId" => task_id,
+                   "status" => %{"state" => "working", "progress" => rem(i, 100)}
+                 })}
+
+              2 ->
+                {:subscribe, TaskStore.subscribe(task_id)}
             end
           end)
         end)
@@ -400,6 +425,7 @@ defmodule Orchestrator.StressTest do
         Enum.map(1..50, fn _ ->
           Task.async(fn ->
             TaskStore.subscribe(task_id)
+
             receive do
               {:task_update, _} -> :received
             after
@@ -425,7 +451,8 @@ defmodule Orchestrator.StressTest do
       IO.puts("   Received updates: #{received_count}")
 
       # Most subscribers should receive the update
-      assert received_count >= 40, "Expected at least 40 subscribers to receive update, got #{received_count}"
+      assert received_count >= 40,
+             "Expected at least 40 subscribers to receive update, got #{received_count}"
     end
   end
 
@@ -482,7 +509,12 @@ defmodule Orchestrator.StressTest do
   defp maybe_transition_breaker(state), do: state
 
   defp record_success(%{breaker_state: :half_open} = state) do
-    %{state | breaker_state: :closed, failure_count: 0, failure_window_start: System.monotonic_time(:millisecond)}
+    %{
+      state
+      | breaker_state: :closed,
+        failure_count: 0,
+        failure_window_start: System.monotonic_time(:millisecond)
+    }
   end
 
   defp record_success(state), do: state

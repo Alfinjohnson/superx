@@ -74,9 +74,14 @@ defmodule Orchestrator.TaskStore do
   def subscribe(task_id), do: Orchestrator.Task.Store.subscribe(task_id)
 
   def set_push_config(task_id, params), do: Orchestrator.Task.PushConfig.set(task_id, params)
-  def get_push_config(task_id, config_id), do: Orchestrator.Task.PushConfig.get(task_id, config_id)
+
+  def get_push_config(task_id, config_id),
+    do: Orchestrator.Task.PushConfig.get(task_id, config_id)
+
   def list_push_configs(task_id), do: Orchestrator.Task.PushConfig.list(task_id)
-  def delete_push_config(task_id, config_id), do: Orchestrator.Task.PushConfig.delete(task_id, config_id)
+
+  def delete_push_config(task_id, config_id),
+    do: Orchestrator.Task.PushConfig.delete(task_id, config_id)
 
   def apply_status_update(update), do: Orchestrator.Task.Store.apply_status_update(update)
   def apply_artifact_update(update), do: Orchestrator.Task.Store.apply_artifact_update(update)

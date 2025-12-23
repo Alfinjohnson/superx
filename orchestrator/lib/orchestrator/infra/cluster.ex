@@ -94,8 +94,12 @@ defmodule Orchestrator.Infra.Cluster do
         |> Enum.filter(fn {_, load} -> load != :unavailable end)
 
       case loads do
-        [] -> node()
-        loads -> {best, _} = Enum.min_by(loads, fn {_, load} -> load end); best
+        [] ->
+          node()
+
+        loads ->
+          {best, _} = Enum.min_by(loads, fn {_, load} -> load end)
+          best
       end
     end
   end

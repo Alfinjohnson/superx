@@ -36,9 +36,9 @@ defmodule Orchestrator.Schema.Agent do
 
   @primary_key {:id, :string, autogenerate: false}
   schema "agents" do
-    field :url, :string
-    field :bearer, :string
-    field :metadata, :map
+    field(:url, :string)
+    field(:bearer, :string)
+    field(:metadata, :map)
     timestamps()
   end
 

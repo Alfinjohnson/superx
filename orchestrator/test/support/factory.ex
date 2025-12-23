@@ -10,8 +10,15 @@ defmodule Orchestrator.Factory do
   # Task Records (for database)
   # -------------------------------------------------------------------
 
+  def build(factory_name, attrs) do
+    factory_name
+    |> build()
+    |> struct!(attrs)
+  end
+
   def build(:task_schema) do
     task_id = "task-#{unique_id()}"
+
     %TaskSchema{
       id: task_id,
       payload: %{
@@ -27,6 +34,7 @@ defmodule Orchestrator.Factory do
 
   def build(:completed_task_schema) do
     schema = build(:task_schema)
+
     payload =
       schema.payload
       |> Map.put("status", %{"state" => "completed"})
@@ -36,6 +44,7 @@ defmodule Orchestrator.Factory do
           "parts" => [%{"type" => "text", "text" => "42"}]
         }
       ])
+
     %{schema | payload: payload}
   end
 
@@ -376,12 +385,6 @@ defmodule Orchestrator.Factory do
   # -------------------------------------------------------------------
   # Helpers
   # -------------------------------------------------------------------
-
-  def build(factory_name, attrs) do
-    factory_name
-    |> build()
-    |> struct!(attrs)
-  end
 
   def insert!(factory_name, attrs \\ %{}) do
     factory_name

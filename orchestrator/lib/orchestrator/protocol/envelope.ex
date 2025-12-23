@@ -116,5 +116,7 @@ defmodule Orchestrator.Envelope do
   defdelegate streaming?(envelope), to: Orchestrator.Protocol.Envelope
 
   # Re-export struct for pattern matching compatibility
-  defstruct Orchestrator.Protocol.Envelope.__struct__() |> Map.keys() |> Enum.reject(&(&1 == :__struct__))
+  defstruct Orchestrator.Protocol.Envelope.__struct__()
+            |> Map.keys()
+            |> Enum.reject(&(&1 == :__struct__))
 end

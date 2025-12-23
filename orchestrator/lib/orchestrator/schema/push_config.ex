@@ -51,15 +51,15 @@ defmodule Orchestrator.Schema.PushConfig do
 
   @primary_key {:id, :string, autogenerate: false}
   schema "push_configs" do
-    field :task_id, :string
-    field :url, :string
-    field :token, :string
-    field :hmac_secret, :string
-    field :jwt_secret, :string
-    field :jwt_issuer, :string
-    field :jwt_audience, :string
-    field :jwt_kid, :string
-    field :authentication, :map
+    field(:task_id, :string)
+    field(:url, :string)
+    field(:token, :string)
+    field(:hmac_secret, :string)
+    field(:jwt_secret, :string)
+    field(:jwt_issuer, :string)
+    field(:jwt_audience, :string)
+    field(:jwt_kid, :string)
+    field(:authentication, :map)
 
     timestamps()
   end

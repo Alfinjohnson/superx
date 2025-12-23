@@ -122,9 +122,11 @@ defmodule Orchestrator.Agent.WorkerTest do
     end
 
     test "opens circuit after reaching failure threshold" do
-      agent = Factory.build(:agent_map_with_config)
+      agent =
+        Factory.build(:agent_map_with_config)
         |> Map.put("failureThreshold", 3)
         |> Map.put("failureWindowMs", 60_000)
+
       Orchestrator.Agent.Store.upsert(agent)
       {:ok, pid} = start_worker(agent)
 
@@ -138,8 +140,10 @@ defmodule Orchestrator.Agent.WorkerTest do
     end
 
     test "emits breaker_open telemetry when circuit opens" do
-      agent = Factory.build(:agent_map_with_config)
+      agent =
+        Factory.build(:agent_map_with_config)
         |> Map.put("failureThreshold", 2)
+
       Orchestrator.Agent.Store.upsert(agent)
       {:ok, pid} = start_worker(agent)
 
@@ -167,9 +171,11 @@ defmodule Orchestrator.Agent.WorkerTest do
 
   describe "circuit breaker - open state" do
     test "rejects requests when circuit is open" do
-      agent = Factory.build(:agent_map_with_config)
+      agent =
+        Factory.build(:agent_map_with_config)
         |> Map.put("failureThreshold", 1)
         |> Map.put("cooldownMs", 60_000)
+
       Orchestrator.Agent.Store.upsert(agent)
       {:ok, pid} = start_worker(agent)
 
@@ -185,9 +191,11 @@ defmodule Orchestrator.Agent.WorkerTest do
     end
 
     test "emits breaker_reject telemetry when rejecting" do
-      agent = Factory.build(:agent_map_with_config)
+      agent =
+        Factory.build(:agent_map_with_config)
         |> Map.put("failureThreshold", 1)
         |> Map.put("cooldownMs", 60_000)
+
       Orchestrator.Agent.Store.upsert(agent)
       {:ok, pid} = start_worker(agent)
 
@@ -206,9 +214,12 @@ defmodule Orchestrator.Agent.WorkerTest do
     end
 
     test "transitions to half-open after cooldown" do
-      agent = Factory.build(:agent_map_with_config)
+      agent =
+        Factory.build(:agent_map_with_config)
         |> Map.put("failureThreshold", 1)
-        |> Map.put("cooldownMs", 50)  # Very short for testing
+        # Very short for testing
+        |> Map.put("cooldownMs", 50)
+
       Orchestrator.Agent.Store.upsert(agent)
       {:ok, pid} = start_worker(agent)
 
@@ -229,9 +240,11 @@ defmodule Orchestrator.Agent.WorkerTest do
 
   describe "circuit breaker - half-open state" do
     test "closes circuit on success in half-open state" do
-      agent = Factory.build(:agent_map_with_config)
+      agent =
+        Factory.build(:agent_map_with_config)
         |> Map.put("failureThreshold", 1)
         |> Map.put("cooldownMs", 10)
+
       Orchestrator.Agent.Store.upsert(agent)
       {:ok, pid} = start_worker(agent)
 
@@ -252,9 +265,11 @@ defmodule Orchestrator.Agent.WorkerTest do
     end
 
     test "emits breaker_closed telemetry on recovery" do
-      agent = Factory.build(:agent_map_with_config)
+      agent =
+        Factory.build(:agent_map_with_config)
         |> Map.put("failureThreshold", 1)
         |> Map.put("cooldownMs", 10)
+
       Orchestrator.Agent.Store.upsert(agent)
       {:ok, _pid} = start_worker(agent)
 
@@ -272,9 +287,11 @@ defmodule Orchestrator.Agent.WorkerTest do
     end
 
     test "re-opens circuit on failure in half-open state" do
-      agent = Factory.build(:agent_map_with_config)
+      agent =
+        Factory.build(:agent_map_with_config)
         |> Map.put("failureThreshold", 1)
         |> Map.put("cooldownMs", 100)
+
       Orchestrator.Agent.Store.upsert(agent)
 
       state = %{
@@ -296,8 +313,10 @@ defmodule Orchestrator.Agent.WorkerTest do
 
   describe "concurrency limiting" do
     test "rejects requests when at max in-flight" do
-      agent = Factory.build(:agent_map_with_config)
+      agent =
+        Factory.build(:agent_map_with_config)
         |> Map.put("maxInFlight", 2)
+
       Orchestrator.Agent.Store.upsert(agent)
       {:ok, pid} = start_worker(agent)
 
@@ -310,8 +329,10 @@ defmodule Orchestrator.Agent.WorkerTest do
     end
 
     test "allows requests when below max in-flight" do
-      agent = Factory.build(:agent_map_with_config)
+      agent =
+        Factory.build(:agent_map_with_config)
         |> Map.put("maxInFlight", 5)
+
       Orchestrator.Agent.Store.upsert(agent)
       {:ok, pid} = start_worker(agent)
 
@@ -323,7 +344,8 @@ defmodule Orchestrator.Agent.WorkerTest do
     end
 
     test "uses default max in-flight of 10" do
-      agent = Factory.build(:agent_map)  # No custom config
+      # No custom config
+      agent = Factory.build(:agent_map)
       Orchestrator.Agent.Store.upsert(agent)
       {:ok, pid} = start_worker(agent)
 
@@ -334,9 +356,12 @@ defmodule Orchestrator.Agent.WorkerTest do
 
   describe "failure window" do
     test "resets failure count when outside window" do
-      agent = Factory.build(:agent_map_with_config)
-        |> Map.put("failureWindowMs", 100)  # 100ms window
+      agent =
+        Factory.build(:agent_map_with_config)
+        # 100ms window
+        |> Map.put("failureWindowMs", 100)
         |> Map.put("failureThreshold", 5)
+
       Orchestrator.Agent.Store.upsert(agent)
       {:ok, pid} = start_worker(agent)
 
@@ -438,8 +463,10 @@ defmodule Orchestrator.Agent.WorkerTest do
 
   describe "configuration options" do
     test "uses custom failureThreshold from agent config" do
-      agent = Factory.build(:agent_map_with_config)
+      agent =
+        Factory.build(:agent_map_with_config)
         |> Map.put("failureThreshold", 10)
+
       Orchestrator.Agent.Store.upsert(agent)
       {:ok, pid} = start_worker(agent)
 
@@ -448,8 +475,10 @@ defmodule Orchestrator.Agent.WorkerTest do
     end
 
     test "uses custom cooldownMs from agent config" do
-      agent = Factory.build(:agent_map_with_config)
+      agent =
+        Factory.build(:agent_map_with_config)
         |> Map.put("cooldownMs", 60_000)
+
       Orchestrator.Agent.Store.upsert(agent)
       {:ok, pid} = start_worker(agent)
 
@@ -458,8 +487,10 @@ defmodule Orchestrator.Agent.WorkerTest do
     end
 
     test "uses custom failureWindowMs from agent config" do
-      agent = Factory.build(:agent_map_with_config)
+      agent =
+        Factory.build(:agent_map_with_config)
         |> Map.put("failureWindowMs", 120_000)
+
       Orchestrator.Agent.Store.upsert(agent)
       {:ok, pid} = start_worker(agent)
 

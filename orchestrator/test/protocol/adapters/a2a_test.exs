@@ -78,11 +78,12 @@ defmodule Orchestrator.Protocol.Adapters.A2ATest do
 
   describe "encode/1" do
     test "encodes envelope to JSON-RPC format" do
-      env = Envelope.new(%{
-        method: :send_message,
-        message: %{"role" => "user", "parts" => [%{"type" => "text", "text" => "Hello"}]},
-        rpc_id: "test-123"
-      })
+      env =
+        Envelope.new(%{
+          method: :send_message,
+          message: %{"role" => "user", "parts" => [%{"type" => "text", "text" => "Hello"}]},
+          rpc_id: "test-123"
+        })
 
       assert {:ok, payload} = A2A.encode(env)
       assert payload["jsonrpc"] == "2.0"
@@ -100,11 +101,12 @@ defmodule Orchestrator.Protocol.Adapters.A2ATest do
     end
 
     test "includes task_id in params when provided" do
-      env = Envelope.new(%{
-        method: :get_task,
-        task_id: "task-abc123",
-        rpc_id: "rpc-1"
-      })
+      env =
+        Envelope.new(%{
+          method: :get_task,
+          task_id: "task-abc123",
+          rpc_id: "rpc-1"
+        })
 
       assert {:ok, payload} = A2A.encode(env)
       assert payload["params"]["id"] == "task-abc123"
@@ -112,22 +114,24 @@ defmodule Orchestrator.Protocol.Adapters.A2ATest do
     end
 
     test "includes context_id in params when provided" do
-      env = Envelope.new(%{
-        method: :send_message,
-        context_id: "ctx-123",
-        rpc_id: "rpc-1"
-      })
+      env =
+        Envelope.new(%{
+          method: :send_message,
+          context_id: "ctx-123",
+          rpc_id: "rpc-1"
+        })
 
       assert {:ok, payload} = A2A.encode(env)
       assert payload["params"]["contextId"] == "ctx-123"
     end
 
     test "includes metadata in params when provided" do
-      env = Envelope.new(%{
-        method: :send_message,
-        metadata: %{"source" => "test"},
-        rpc_id: "rpc-1"
-      })
+      env =
+        Envelope.new(%{
+          method: :send_message,
+          metadata: %{"source" => "test"},
+          rpc_id: "rpc-1"
+        })
 
       assert {:ok, payload} = A2A.encode(env)
       assert payload["params"]["metadata"] == %{"source" => "test"}
@@ -324,12 +328,13 @@ defmodule Orchestrator.Protocol.Adapters.A2ATest do
 
   describe "build_request/1" do
     test "builds complete JSON-RPC request from envelope" do
-      env = Envelope.new(%{
-        method: :send_message,
-        message: %{"role" => "user", "parts" => [%{"text" => "Hello"}]},
-        context_id: "ctx-1",
-        rpc_id: "rpc-1"
-      })
+      env =
+        Envelope.new(%{
+          method: :send_message,
+          message: %{"role" => "user", "parts" => [%{"text" => "Hello"}]},
+          context_id: "ctx-1",
+          rpc_id: "rpc-1"
+        })
 
       request = A2A.build_request(env)
 
@@ -371,14 +376,15 @@ defmodule Orchestrator.Protocol.Adapters.A2ATest do
 
   describe "roundtrip encode/decode" do
     test "envelope survives encode -> decode cycle" do
-      original = Envelope.new(%{
-        method: :send_message,
-        message: %{"role" => "user", "parts" => [%{"text" => "Test"}]},
-        task_id: "task-123",
-        context_id: "ctx-456",
-        rpc_id: "rpc-789",
-        metadata: %{"key" => "value"}
-      })
+      original =
+        Envelope.new(%{
+          method: :send_message,
+          message: %{"role" => "user", "parts" => [%{"text" => "Test"}]},
+          task_id: "task-123",
+          context_id: "ctx-456",
+          rpc_id: "rpc-789",
+          metadata: %{"key" => "value"}
+        })
 
       assert {:ok, wire} = A2A.encode(original)
       assert {:ok, decoded} = A2A.decode(wire)

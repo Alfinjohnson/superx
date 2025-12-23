@@ -95,13 +95,18 @@ defmodule Orchestrator.Infra.SSEClient do
     new_state =
       Enum.reduce(events, state, fn ev, acc ->
         case handle_event(ev, acc) do
-          {:ok, acc2} -> acc2
+          {:ok, acc2} ->
+            acc2
+
           {:init, result, acc2} ->
             unless acc2.sent_init do
               send(acc2.reply_to, {:stream_init, acc2.rpc_id, result})
             end
+
             %{acc2 | sent_init: true}
-          {:error, acc2} -> acc2
+
+          {:error, acc2} ->
+            acc2
         end
       end)
 
@@ -153,6 +158,7 @@ defmodule Orchestrator.Infra.SSEClient do
       "message" => message,
       "status" => %{"state" => "completed"}
     }
+
     TaskStore.put(task)
   end
 

@@ -17,18 +17,19 @@ defmodule Orchestrator.Protocol.EnvelopeTest do
     end
 
     test "creates envelope with all fields" do
-      env = Envelope.new(%{
-        protocol: "a2a",
-        version: "0.3.0",
-        method: :send_message,
-        task_id: "task-123",
-        context_id: "ctx-456",
-        message: %{"role" => "user"},
-        payload: %{"full" => "params"},
-        metadata: %{"key" => "value"},
-        agent_id: "agent-1",
-        rpc_id: "rpc-1"
-      })
+      env =
+        Envelope.new(%{
+          protocol: "a2a",
+          version: "0.3.0",
+          method: :send_message,
+          task_id: "task-123",
+          context_id: "ctx-456",
+          message: %{"role" => "user"},
+          payload: %{"full" => "params"},
+          metadata: %{"key" => "value"},
+          agent_id: "agent-1",
+          rpc_id: "rpc-1"
+        })
 
       assert env.protocol == "a2a"
       assert env.version == "0.3.0"
@@ -43,11 +44,12 @@ defmodule Orchestrator.Protocol.EnvelopeTest do
     end
 
     test "accepts string keys" do
-      env = Envelope.new(%{
-        "method" => :send_message,
-        "taskId" => "task-from-string",
-        "contextId" => "ctx-from-string"
-      })
+      env =
+        Envelope.new(%{
+          "method" => :send_message,
+          "taskId" => "task-from-string",
+          "contextId" => "ctx-from-string"
+        })
 
       assert env.method == :send_message
       assert env.task_id == "task-from-string"
@@ -55,12 +57,13 @@ defmodule Orchestrator.Protocol.EnvelopeTest do
     end
 
     test "prefers atom keys over string keys" do
-      env = Envelope.new(%{
-        :method => :get_task,
-        "method" => :send_message,
-        :task_id => "atom-task",
-        "taskId" => "string-task"
-      })
+      env =
+        Envelope.new(%{
+          :method => :get_task,
+          "method" => :send_message,
+          :task_id => "atom-task",
+          "taskId" => "string-task"
+        })
 
       assert env.method == :get_task
       assert env.task_id == "atom-task"
@@ -89,11 +92,13 @@ defmodule Orchestrator.Protocol.EnvelopeTest do
 
     test "updates multiple fields" do
       original = Envelope.new(%{method: :send_message})
-      updated = Envelope.update(original, [
-        task_id: "task-1",
-        context_id: "ctx-1",
-        metadata: %{"updated" => true}
-      ])
+
+      updated =
+        Envelope.update(original,
+          task_id: "task-1",
+          context_id: "ctx-1",
+          metadata: %{"updated" => true}
+        )
 
       assert updated.task_id == "task-1"
       assert updated.context_id == "ctx-1"
@@ -101,12 +106,14 @@ defmodule Orchestrator.Protocol.EnvelopeTest do
     end
 
     test "preserves unchanged fields" do
-      original = Envelope.new(%{
-        method: :send_message,
-        protocol: "a2a",
-        version: "0.3.0",
-        agent_id: "agent-1"
-      })
+      original =
+        Envelope.new(%{
+          method: :send_message,
+          protocol: "a2a",
+          version: "0.3.0",
+          agent_id: "agent-1"
+        })
+
       updated = Envelope.update(original, task_id: "task-1")
 
       assert updated.protocol == "a2a"

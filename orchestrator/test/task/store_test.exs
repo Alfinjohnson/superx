@@ -59,6 +59,7 @@ defmodule Orchestrator.Task.StoreTest do
         "id" => task_id,
         "status" => %{"state" => "completed"}
       }
+
       assert :ok = Store.put(completed)
 
       # Try to update it
@@ -66,6 +67,7 @@ defmodule Orchestrator.Task.StoreTest do
         "id" => task_id,
         "status" => %{"state" => "working"}
       }
+
       assert {:error, :terminal} = Store.put(update)
     end
 
@@ -76,6 +78,7 @@ defmodule Orchestrator.Task.StoreTest do
         "id" => task_id,
         "status" => %{"state" => "failed"}
       }
+
       assert :ok = Store.put(failed)
 
       update = %{"id" => task_id, "status" => %{"state" => "working"}}
@@ -89,6 +92,7 @@ defmodule Orchestrator.Task.StoreTest do
         "id" => task_id,
         "status" => %{"state" => "canceled"}
       }
+
       assert :ok = Store.put(canceled)
 
       update = %{"id" => task_id, "status" => %{"state" => "working"}}
@@ -103,6 +107,7 @@ defmodule Orchestrator.Task.StoreTest do
 
     test "returns task payload for existing task" do
       task_id = "task-#{unique_id()}"
+
       task = %{
         "id" => task_id,
         "contextId" => "ctx-abc",
@@ -206,11 +211,13 @@ defmodule Orchestrator.Task.StoreTest do
   describe "apply_artifact_update/1" do
     test "adds artifact to task" do
       task_id = "task-#{unique_id()}"
+
       task = %{
         "id" => task_id,
         "status" => %{"state" => "working"},
         "artifacts" => []
       }
+
       Store.put(task)
 
       update = %{

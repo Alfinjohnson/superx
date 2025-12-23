@@ -44,7 +44,8 @@ defmodule Orchestrator.Protocol.Registry do
 
   # Ordered versions for negotiation (newest first)
   @version_priority %{
-    "a2a" => ["0.3.0"]  # Add newer versions at the front
+    # Add newer versions at the front
+    "a2a" => ["0.3.0"]
     # "mcp" => ["1.0.0"]
   }
 
@@ -80,15 +81,16 @@ defmodule Orchestrator.Protocol.Registry do
   - `client_versions` - List of versions client supports
   - `server_versions` - List of versions server supports (optional, defaults to all)
   """
-  @spec negotiate(String.t(), [String.t()], [String.t()] | nil) :: {:ok, module(), String.t()} | {:error, term()}
+  @spec negotiate(String.t(), [String.t()], [String.t()] | nil) ::
+          {:ok, module(), String.t()} | {:error, term()}
   def negotiate(protocol, client_versions, server_versions \\ nil) do
     server_versions = server_versions || supported_versions(protocol)
     priority = Map.get(@version_priority, protocol, [])
 
     # Find first (highest priority) version supported by both
     case Enum.find(priority, fn v ->
-      v in client_versions and v in server_versions
-    end) do
+           v in client_versions and v in server_versions
+         end) do
       nil ->
         {:error, {:no_common_version, protocol, client_versions, server_versions}}
 
@@ -140,16 +142,22 @@ defmodule Orchestrator.Protocol.Registry do
     protocol = Map.get(agent_config, :protocol, "a2a")
     version = Map.get(agent_config, :protocol_version)
 
-    adapter = if version do
-      case adapter_for(protocol, version) do
-        {:ok, adapter} -> adapter
-        {:error, reason} ->
-          Logger.warning("Unsupported protocol version #{protocol}/#{version}: #{inspect(reason)}, falling back to latest")
-          adapter_for_latest_or_default(protocol)
+    adapter =
+      if version do
+        case adapter_for(protocol, version) do
+          {:ok, adapter} ->
+            adapter
+
+          {:error, reason} ->
+            Logger.warning(
+              "Unsupported protocol version #{protocol}/#{version}: #{inspect(reason)}, falling back to latest"
+            )
+
+            adapter_for_latest_or_default(protocol)
+        end
+      else
+        adapter_for_latest_or_default(protocol)
       end
-    else
-      adapter_for_latest_or_default(protocol)
-    end
 
     adapter
   end
@@ -157,7 +165,8 @@ defmodule Orchestrator.Protocol.Registry do
   defp adapter_for_latest_or_default(protocol) do
     case adapter_for_latest(protocol) do
       {:ok, adapter} -> adapter
-      {:error, _} -> Orchestrator.Protocol.Adapters.A2A  # Default fallback
+      # Default fallback
+      {:error, _} -> Orchestrator.Protocol.Adapters.A2A
     end
   end
 

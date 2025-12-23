@@ -43,7 +43,9 @@ defmodule Orchestrator.Task.PushConfig do
   @spec deliver_event(String.t(), map()) :: :ok
   def deliver_event(task_id, stream_payload) do
     configs = adapter().get_for_task(task_id)
-    push_notifier = Application.get_env(:orchestrator, :push_notifier, Orchestrator.Infra.PushNotifier)
+
+    push_notifier =
+      Application.get_env(:orchestrator, :push_notifier, Orchestrator.Infra.PushNotifier)
 
     Enum.each(configs, fn cfg ->
       Task.Supervisor.start_child(Orchestrator.TaskSupervisor, fn ->

@@ -50,6 +50,7 @@ defmodule Orchestrator.Agent.Store do
       "bearer" => Map.get(agent, "bearer"),
       "metadata" => Map.get(agent, "metadata", %{})
     }
+
     adapter().put(id, url, opts)
     {:ok, agent}
   end

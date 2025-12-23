@@ -143,13 +143,15 @@ defmodule Orchestrator.RouterTest do
         "status" => %{"state" => "working"},
         "artifacts" => []
       }
+
       TaskStore.put(task)
 
       request = %{
         "jsonrpc" => "2.0",
         "id" => "1",
         "method" => "tasks.get",
-        "params" => %{"taskId" => "task-123"}  # Note: taskId not id
+        # Note: taskId not id
+        "params" => %{"taskId" => "task-123"}
       }
 
       conn = json_post("/rpc", request)
@@ -166,7 +168,8 @@ defmodule Orchestrator.RouterTest do
         "jsonrpc" => "2.0",
         "id" => "1",
         "method" => "tasks.get",
-        "params" => %{"taskId" => "non-existent"}  # Note: taskId not id
+        # Note: taskId not id
+        "params" => %{"taskId" => "non-existent"}
       }
 
       conn = json_post("/rpc", request)
@@ -175,7 +178,8 @@ defmodule Orchestrator.RouterTest do
       assert conn.status == 400
       response = Jason.decode!(conn.resp_body)
 
-      assert response["error"]["code"] == -32004  # Task not found
+      # Task not found
+      assert response["error"]["code"] == -32004
     end
   end
 

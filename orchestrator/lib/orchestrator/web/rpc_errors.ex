@@ -109,8 +109,12 @@ defmodule Orchestrator.Web.RpcErrors do
   def from_internal_error({:error, :no_agent}), do: {@invalid_params, "agentId is required"}
   def from_internal_error({:error, :agent_missing}), do: {@agent_not_found, "Agent not found"}
   def from_internal_error({:error, :agent_not_found}), do: {@agent_not_found, "Agent not found"}
-  def from_internal_error({:error, :circuit_open}), do: {@circuit_open, "Agent circuit breaker open"}
-  def from_internal_error({:error, :too_many_requests}), do: {@agent_overloaded, "Agent overloaded"}
+
+  def from_internal_error({:error, :circuit_open}),
+    do: {@circuit_open, "Agent circuit breaker open"}
+
+  def from_internal_error({:error, :too_many_requests}),
+    do: {@agent_overloaded, "Agent overloaded"}
 
   # Task errors
   def from_internal_error({:error, :task_not_found}), do: {@task_not_found, "Task not found"}
@@ -127,7 +131,8 @@ defmodule Orchestrator.Web.RpcErrors do
   def from_internal_error({:error, %{"code" => code, "message" => msg}}), do: {code, msg}
 
   # Generic fallback
-  def from_internal_error({:error, other}), do: {@remote_error, "Unknown error: #{inspect(other)}"}
+  def from_internal_error({:error, other}),
+    do: {@remote_error, "Unknown error: #{inspect(other)}"}
 
   @doc """
   Handle an internal error and send appropriate RPC response.

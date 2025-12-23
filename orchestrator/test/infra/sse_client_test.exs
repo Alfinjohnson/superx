@@ -19,12 +19,13 @@ defmodule Orchestrator.Infra.SSEClientTest do
         |> Plug.Conn.send_resp(200, "")
       end)
 
-      result = start_sse_with_stub(
-        url: "http://test.local/stream",
-        payload: %{"method" => "message/stream"},
-        reply_to: self(),
-        rpc_id: "rpc-123"
-      )
+      result =
+        start_sse_with_stub(
+          url: "http://test.local/stream",
+          payload: %{"method" => "message/stream"},
+          reply_to: self(),
+          rpc_id: "rpc-123"
+        )
 
       assert {:ok, pid} = result
       assert is_pid(pid)
@@ -101,6 +102,7 @@ defmodule Orchestrator.Infra.SSEClientTest do
 
       # Simulate receiving first event
       event = Factory.build(:sse_status_update)
+
       state = %{
         buffer: "",
         sent_init: false,
@@ -385,6 +387,7 @@ defmodule Orchestrator.Infra.SSEClientTest do
       "message" => message,
       "status" => %{"state" => "completed"}
     }
+
     TaskStore.put(task)
   end
 
