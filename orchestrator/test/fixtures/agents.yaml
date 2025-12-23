@@ -1,0 +1,11 @@
+agents:
+  test_agent:
+    name: Test Agent
+    url: http://localhost:4001/rpc
+    protocol: a2a
+  
+  another_agent:
+    name: Another Test Agent
+    url: http://localhost:4002/rpc
+    protocol: a2a
+    bearer: test-bearer-token

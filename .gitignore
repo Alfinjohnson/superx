@@ -1,0 +1,113 @@
+# ===================
+# Orchestrator (Elixir)
+# ===================
+
+# Mix build artifacts
+orchestrator/_build/
+orchestrator/cover/
+orchestrator/deps/
+orchestrator/doc/
+
+# Mix artifacts
+orchestrator/.fetch
+orchestrator/*.ez
+orchestrator/orchestrator-*.tar
+
+# Erlang crash dumps
+orchestrator/erl_crash.dump
+
+# SQLite database files
+orchestrator/*.db
+orchestrator/*.db-journal
+orchestrator/*.db-shm
+orchestrator/*.db-wal
+orchestrator/priv/repo/*.db*
+
+# Dialyzer PLT files
+orchestrator/priv/plts/
+orchestrator/*.plt
+orchestrator/*.plt.hash
+
+# Temporary files
+orchestrator/tmp/
+
+# ===================
+# Python
+# ===================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# ===================
+# Environment & Secrets
+# ===================
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ===================
+# IDE & Editors
+# ===================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+
+# ===================
+# OS Files
+# ===================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ===================
+# Logs
+# ===================
+*.log
+logs/
+
+# ===================
+# Database Files
+# ===================
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# ===================
+# Misc
+# ===================
+docs/a2a-v030

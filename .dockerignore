@@ -1,0 +1,45 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+orchestrator/_build
+orchestrator/deps
+*.ez
+
+# Test
+orchestrator/test
+orchestrator/cover
+*.coverdata
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs (keep docs/ at root for GitHub Pages if needed)
+orchestrator/doc
+
+# Local env files
+.env
+.env.local
+.env.*.local
+orchestrator/.env
+orchestrator/.env.local
+
+# Temp files
+*.log
+*.tmp
+tmp/
+
+# Elixir
+erl_crash.dump
+
+# Docker
+docker-compose.override.yml

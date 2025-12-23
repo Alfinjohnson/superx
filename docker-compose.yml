@@ -1,0 +1,134 @@
+# SuperX - Docker Compose
+# For local development and testing
+# Run from monorepo root: docker compose up
+
+services:
+  # ==========================================================================
+  # PostgreSQL Database
+  # ==========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: superx-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: superx_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================================================
+  # SuperX Orchestrator (Production Build)
+  # ==========================================================================
+  orchestrator:
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+    container_name: superx-orchestrator
+    env_file:
+      - .env
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      SUPERX_PERSISTENCE: postgres
+      DATABASE_URL: ecto://postgres:postgres@postgres:5432/superx_dev
+      LOG_LEVEL: info
+      # Erlang distribution settings (production-friendly)
+      # Use short names by default to avoid FQDN requirements
+      RELEASE_DISTRIBUTION: sname
+      # Node short name for Erlang distribution (adjust per deployment)
+      RELEASE_NODE: orchestrator
+      # Provide a strong cookie via .env in production
+      RELEASE_COOKIE: ${RELEASE_COOKIE:-dev-cookie-change-me}
+      # Pin distribution port range for firewalls/load balancers
+      ERL_AFLAGS: "-kernel inet_dist_listen_min 9000 inet_dist_listen_max 9000"
+      # Phoenix secret for session/signing (override via .env in prod)
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-dev-secret-key-change-me}
+      # DB pool size for production
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+      # Agents configuration file
+      AGENTS_FILE: /home/app/agents.yml
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./samples/agents.yml:/home/app/agents.yml:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ==========================================================================
+  # SuperX Orchestrator (Development - Hot Reload)
+  # ==========================================================================
+  orchestrator-dev:
+    image: hexpm/elixir:1.19.4-erlang-28.0-debian-bookworm-20250113-slim
+    container_name: superx-orchestrator-dev
+    working_dir: /app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      MIX_ENV: dev
+      PORT: 4000
+      SUPERX_PERSISTENCE: postgres
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: superx_dev
+      AGENTS_FILE: /app/agents.yml
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./orchestrator:/app
+      - ./samples/agents.yml:/app/agents.yml:ro
+      - deps:/app/deps
+      - build:/app/_build
+    command: >
+      sh -c "mix local.hex --force &&
+             mix local.rebar --force &&
+             mix deps.get &&
+             mix ecto.create &&
+             mix ecto.migrate &&
+             mix run --no-halt"
+    profiles:
+      - dev
+
+  # ==========================================================================
+  # SuperX Orchestrator (Memory Mode - Stateless)
+  # ==========================================================================
+  orchestrator-stateless:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: superx-orchestrator-stateless
+    environment:
+      PORT: 4000
+      SUPERX_PERSISTENCE: memory
+      LOG_LEVEL: info
+      AGENTS_FILE: /home/app/agents.yml
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./samples/agents.yml:/home/app/agents.yml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - stateless
+
+volumes:
+  postgres_data:
+  deps:
+  build:
