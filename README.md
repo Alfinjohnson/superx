@@ -205,7 +205,7 @@ export AGENTS_FILE=/etc/superx/agents.yml
 export SECRET_KEY_BASE=$(openssl rand -base64 64)
 
 # Pull and run
-docker pull your-registry/superx:latest
+docker pull ghcr.io/alfinjohnson/superx:latest
 docker run -d \
   --name superx \
   -p 4000:4000 \
@@ -214,7 +214,7 @@ docker run -d \
   -e AGENTS_FILE \
   -e SECRET_KEY_BASE \
   -v /etc/superx/agents.yml:/home/app/agents.yml:ro \
-  your-registry/superx:latest
+  ghcr.io/alfinjohnson/superx:latest
 ```
 
 ## Agent Configuration
@@ -239,7 +239,7 @@ Mount the file and set `AGENTS_FILE`:
 docker run -d \
   -v ./agents.yml:/home/app/agents.yml:ro \
   -e AGENTS_FILE=/home/app/agents.yml \
-  your-registry/superx:latest
+  ghcr.io/alfinjohnson/superx:latest
 ```
 
 ### Runtime Agent Management

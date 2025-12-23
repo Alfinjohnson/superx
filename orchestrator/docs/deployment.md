@@ -30,7 +30,7 @@ docker run -d \
   -p 4000:4000 \
   -e DATABASE_URL=ecto://user:pass@db:5432/superx \
   -e SECRET_KEY_BASE=$(openssl rand -base64 64) \
-  your-registry/superx:latest
+  ghcr.io/alfinjohnson/superx:latest
 ```
 
 ### Docker Compose (Recommended)
@@ -54,7 +54,7 @@ services:
       retries: 5
 
   orchestrator:
-    image: your-registry/superx:latest
+    image: ghcr.io/alfinjohnson/superx:latest
     # Or build locally:
     # build:
     #   context: .
@@ -165,7 +165,7 @@ spec:
     spec:
       containers:
         - name: superx
-          image: your-registry/superx:latest
+          image: ghcr.io/alfinjohnson/superx:latest
           ports:
             - containerPort: 4000
           envFrom:
@@ -594,7 +594,7 @@ curl -X POST http://localhost:4000/rpc \
 
 ```bash
 # Update deployment
-kubectl set image deployment/superx superx=your-registry/superx:v1.2.0
+kubectl set image deployment/superx superx=ghcr.io/alfinjohnson/superx:v1.2.0
 
 # Watch rollout
 kubectl rollout status deployment/superx
@@ -609,7 +609,7 @@ Run migrations before deploying new version:
 kubectl exec -it deployment/superx -- bin/orchestrator eval "Orchestrator.Release.migrate()"
 
 # Then update image
-kubectl set image deployment/superx superx=your-registry/superx:v1.2.0
+kubectl set image deployment/superx superx=ghcr.io/alfinjohnson/superx:v1.2.0
 ```
 
 ### Rollback
