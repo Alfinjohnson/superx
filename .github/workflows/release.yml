@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+  packages: write
+
 env:
   MIX_ENV: prod
   ELIXIR_VERSION: "1.19"
