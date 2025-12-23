@@ -186,7 +186,7 @@ jobs:
           MIX_ENV: prod
 
       - name: Upload release artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: orchestrator-release
           path: orchestrator/_build/prod/rel/orchestrator
