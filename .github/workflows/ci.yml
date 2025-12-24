@@ -33,7 +33,7 @@ jobs:
           otp-version: ${{ env.OTP_VERSION }}
 
       - name: Restore dependencies cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             orchestrator/deps
@@ -47,8 +47,73 @@ jobs:
       - name: Compile
         run: mix compile --warnings-as-errors
 
-      - name: Run tests
-        run: mix test --exclude stress
+      - name: Run tests (memory mode)
+        run: mix test --exclude postgres_only
+        env:
+          SUPERX_PERSISTENCE: memory
+
+  # ===========================================================================
+  # Test in PostgreSQL Mode (full test suite)
+  # ===========================================================================
+  test-postgres:
+    name: Test (PostgreSQL Mode)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: superx_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            orchestrator/deps
+            orchestrator/_build
+          key: ${{ runner.os }}-mix-${{ hashFiles('orchestrator/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Setup database
+        run: |
+          mix ecto.create
+          mix ecto.migrate
+        env:
+          SUPERX_PERSISTENCE: postgres
+          DB_HOST: localhost
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: superx_test
+
+      - name: Run tests (PostgreSQL mode)
+        run: mix test
+        env:
+          SUPERX_PERSISTENCE: postgres
+          DB_HOST: localhost
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: superx_test
 
   # ===========================================================================
   # Code Quality
@@ -67,7 +132,7 @@ jobs:
           otp-version: ${{ env.OTP_VERSION }}
 
       - name: Restore dependencies cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             orchestrator/deps
@@ -102,7 +167,7 @@ jobs:
           otp-version: ${{ env.OTP_VERSION }}
 
       - name: Restore dependencies cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             orchestrator/deps
