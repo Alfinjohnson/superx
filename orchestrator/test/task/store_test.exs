@@ -133,6 +133,8 @@ defmodule Orchestrator.Task.StoreTest do
       assert Store.get(task_id) != nil
 
       assert :ok = Store.delete(task_id)
+      # Give async replication time to complete
+      Process.sleep(10)
       assert Store.get(task_id) == nil
     end
 
