@@ -776,11 +776,22 @@ defmodule Orchestrator.StressTest do
   # -------------------------------------------------------------------
 
   defp collect_updates_for_duration(duration_ms, acc) do
-    receive do
-      {:task_update, task} ->
-        collect_updates_for_duration(duration_ms, [task | acc])
-    after
-      duration_ms -> Enum.reverse(acc)
+    start_time = System.monotonic_time(:millisecond)
+    collect_updates_until(start_time + duration_ms, acc)
+  end
+
+  defp collect_updates_until(end_time, acc) do
+    remaining = end_time - System.monotonic_time(:millisecond)
+
+    if remaining <= 0 do
+      Enum.reverse(acc)
+    else
+      receive do
+        {:task_update, task} ->
+          collect_updates_until(end_time, [task | acc])
+      after
+        remaining -> Enum.reverse(acc)
+      end
     end
   end
 
