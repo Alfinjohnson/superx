@@ -29,24 +29,24 @@ defmodule Orchestrator.Protocol.Registry do
   # Add new adapters here as they are implemented
 
   @adapters %{
-    {"a2a", "0.3.0"} => Orchestrator.Protocol.Adapters.A2A
+    {"a2a", "0.3.0"} => Orchestrator.Protocol.Adapters.A2A,
+    {"mcp", "2024-11-05"} => Orchestrator.Protocol.Adapters.MCP
     # Future versions:
     # {"a2a", "0.4.0"} => Orchestrator.Protocol.Adapters.A2A_040,
-    # {"a2a", "1.0.0"} => Orchestrator.Protocol.Adapters.A2A_100,
-    # {"mcp", "1.0.0"} => Orchestrator.Protocol.Adapters.MCP
+    # {"a2a", "1.0.0"} => Orchestrator.Protocol.Adapters.A2A_100
   }
 
   # Latest version for each protocol (used when version not specified)
   @latest_versions %{
-    "a2a" => "0.3.0"
-    # "mcp" => "1.0.0"
+    "a2a" => "0.3.0",
+    "mcp" => "2024-11-05"
   }
 
   # Ordered versions for negotiation (newest first)
   @version_priority %{
     # Add newer versions at the front
-    "a2a" => ["0.3.0"]
-    # "mcp" => ["1.0.0"]
+    "a2a" => ["0.3.0"],
+    "mcp" => ["2024-11-05"]
   }
 
   @doc """

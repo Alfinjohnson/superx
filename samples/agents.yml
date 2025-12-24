@@ -1,4 +1,7 @@
 agents:
+  # =============================================================================
+  # A2A Protocol Agents
+  # =============================================================================
   check_prime_agent:
     version: 1.0.0
     url: http://host.docker.internal:8001/a2a/check_prime_agent
@@ -24,3 +27,70 @@ agents:
               - math
               - prime
               - numbers
+
+  # =============================================================================
+  # MCP Protocol Agents (Model Context Protocol)
+  # =============================================================================
+
+  # Example: Remote MCP server via HTTP (streamable-http transport)
+  # exa_search:
+  #   protocol: mcp
+  #   protocolVersion: 2024-11-05
+  #   transport:
+  #     type: streamable-http
+  #     url: https://mcp.exa.ai/mcp
+  #     headers:
+  #       Authorization: Bearer ${EXA_API_KEY}
+  #   metadata:
+  #     description: Exa AI search MCP server
+
+  # Example: Remote MCP server via SSE (legacy transport)
+  # remote_mcp_sse:
+  #   protocol: mcp
+  #   protocolVersion: 2024-11-05
+  #   transport:
+  #     type: sse
+  #     url: https://example.com/mcp/sse
+  #     headers:
+  #       X-API-Key: ${API_KEY}
+
+  # Example: Local MCP server via STDIO (filesystem access)
+  # local_filesystem:
+  #   protocol: mcp
+  #   protocolVersion: 2024-11-05
+  #   transport:
+  #     type: stdio
+  #     command: npx
+  #     args:
+  #       - "-y"
+  #       - "@modelcontextprotocol/server-filesystem"
+  #       - "/home/user/documents"
+  #   metadata:
+  #     description: Local filesystem MCP server
+
+  # Example: Local MCP server with Python
+  # local_python_tools:
+  #   protocol: mcp
+  #   transport:
+  #     type: stdio
+  #     command: python
+  #     args:
+  #       - "-m"
+  #       - "my_mcp_server"
+  #     env:
+  #       PYTHONPATH: /home/user/projects/mcp-server
+  #       DEBUG: "true"
+
+  # Example: Docker-based MCP server
+  # docker_mcp_server:
+  #   protocol: mcp
+  #   transport:
+  #     type: stdio
+  #     command: docker
+  #     args:
+  #       - "run"
+  #       - "-i"
+  #       - "--rm"
+  #       - "mcp/server:latest"
+  #     env:
+  #       API_KEY: ${MCP_API_KEY}

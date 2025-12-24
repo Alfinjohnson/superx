@@ -30,6 +30,7 @@ defmodule Orchestrator.Protocol.Methods do
   """
 
   @type canonical_method ::
+          # A2A methods
           :send_message
           | :stream_message
           | :get_task
@@ -41,10 +42,48 @@ defmodule Orchestrator.Protocol.Methods do
           | :list_push_configs
           | :delete_push_config
           | :get_agent_card
+          # MCP lifecycle methods
+          | :initialize
+          | :initialized
+          | :ping
+          | :shutdown
+          # MCP tool methods
+          | :list_tools
+          | :call_tool
+          | :tools_changed
+          # MCP resource methods
+          | :list_resources
+          | :list_resource_templates
+          | :read_resource
+          | :subscribe_resource
+          | :unsubscribe_resource
+          | :resources_changed
+          | :resource_updated
+          # MCP prompt methods
+          | :list_prompts
+          | :get_prompt
+          | :prompts_changed
+          # MCP sampling/elicitation (bidirectional)
+          | :create_message
+          | :create_elicitation
+          # MCP roots
+          | :list_roots
+          | :roots_changed
+          # MCP logging
+          | :set_log_level
+          | :log_message
+          # MCP progress
+          | :progress
+          | :cancelled
           | :unknown
 
   @doc "All supported canonical method names."
   def all do
+    a2a_methods() ++ mcp_methods()
+  end
+
+  @doc "A2A protocol methods."
+  def a2a_methods do
     [
       :send_message,
       :stream_message,
@@ -57,6 +96,45 @@ defmodule Orchestrator.Protocol.Methods do
       :list_push_configs,
       :delete_push_config,
       :get_agent_card
+    ]
+  end
+
+  @doc "MCP protocol methods."
+  def mcp_methods do
+    [
+      # Lifecycle
+      :initialize,
+      :initialized,
+      :ping,
+      :shutdown,
+      # Tools
+      :list_tools,
+      :call_tool,
+      :tools_changed,
+      # Resources
+      :list_resources,
+      :list_resource_templates,
+      :read_resource,
+      :subscribe_resource,
+      :unsubscribe_resource,
+      :resources_changed,
+      :resource_updated,
+      # Prompts
+      :list_prompts,
+      :get_prompt,
+      :prompts_changed,
+      # Sampling/Elicitation
+      :create_message,
+      :create_elicitation,
+      # Roots
+      :list_roots,
+      :roots_changed,
+      # Logging
+      :set_log_level,
+      :log_message,
+      # Progress
+      :progress,
+      :cancelled
     ]
   end
 
@@ -78,4 +156,44 @@ defmodule Orchestrator.Protocol.Methods do
   def push_method?(:list_push_configs), do: true
   def push_method?(:delete_push_config), do: true
   def push_method?(_), do: false
+
+  @doc "Check if method is an MCP tool operation."
+  def mcp_tool_method?(:list_tools), do: true
+  def mcp_tool_method?(:call_tool), do: true
+  def mcp_tool_method?(:tools_changed), do: true
+  def mcp_tool_method?(_), do: false
+
+  @doc "Check if method is an MCP resource operation."
+  def mcp_resource_method?(:list_resources), do: true
+  def mcp_resource_method?(:list_resource_templates), do: true
+  def mcp_resource_method?(:read_resource), do: true
+  def mcp_resource_method?(:subscribe_resource), do: true
+  def mcp_resource_method?(:unsubscribe_resource), do: true
+  def mcp_resource_method?(:resources_changed), do: true
+  def mcp_resource_method?(:resource_updated), do: true
+  def mcp_resource_method?(_), do: false
+
+  @doc "Check if method is an MCP prompt operation."
+  def mcp_prompt_method?(:list_prompts), do: true
+  def mcp_prompt_method?(:get_prompt), do: true
+  def mcp_prompt_method?(:prompts_changed), do: true
+  def mcp_prompt_method?(_), do: false
+
+  @doc "Check if method is an MCP notification (no response expected)."
+  def mcp_notification?(:initialized), do: true
+  def mcp_notification?(:tools_changed), do: true
+  def mcp_notification?(:resources_changed), do: true
+  def mcp_notification?(:resource_updated), do: true
+  def mcp_notification?(:prompts_changed), do: true
+  def mcp_notification?(:roots_changed), do: true
+  def mcp_notification?(:log_message), do: true
+  def mcp_notification?(:progress), do: true
+  def mcp_notification?(:cancelled), do: true
+  def mcp_notification?(_), do: false
+
+  @doc "Check if method is an MCP server-to-client request (bidirectional)."
+  def mcp_server_request?(:create_message), do: true
+  def mcp_server_request?(:create_elicitation), do: true
+  def mcp_server_request?(:list_roots), do: true
+  def mcp_server_request?(_), do: false
 end

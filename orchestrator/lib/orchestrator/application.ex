@@ -20,6 +20,9 @@ defmodule Orchestrator.Application do
         {Horde.Registry, [name: Orchestrator.Agent.Registry, keys: :unique, members: :auto]},
         {Orchestrator.Agent.Supervisor, []},
 
+        # MCP session management
+        Orchestrator.MCP.Supervisor,
+
         # PubSub for task notifications
         Orchestrator.Task.PubSub,
 
