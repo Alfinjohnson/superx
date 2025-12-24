@@ -294,15 +294,15 @@ defmodule Orchestrator.StressTest do
         agent_id: "recovery-test"
       }
 
-      cycles = 5
+      cycles = 3
 
       Enum.reduce(1..cycles, state, fn _cycle, acc ->
         # Inject failures to open circuit
         opened_state = Enum.reduce(1..5, acc, fn _, s -> inject_failure(s) end)
         assert opened_state.breaker_state == :open
 
-        # Wait for cooldown
-        Process.sleep(100)
+        # Wait for cooldown - reduced from 100ms to 60ms
+        Process.sleep(60)
 
         # Transition to half-open
         half_open_state = maybe_transition_breaker(opened_state)

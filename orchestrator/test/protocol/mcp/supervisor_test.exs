@@ -27,25 +27,6 @@ defmodule Orchestrator.Protocol.MCP.SupervisorTest do
           assert true
       end
     end
-
-    test "rejects config without id" do
-      config = %{
-        "url" => "http://localhost:3000",
-        "transport" => "streamable-http"
-      }
-
-      # Session may start even without id, but won't register properly
-      result = Supervisor.start_session(config)
-
-      # Clean up if it started
-      case result do
-        {:ok, pid} -> GenServer.stop(pid)
-        {:error, _} -> :ok
-      end
-
-      # Just verify we got a result
-      assert match?({:ok, _}, result) or match?({:error, _}, result)
-    end
   end
 
   describe "stop_session/1" do

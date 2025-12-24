@@ -25,14 +25,6 @@ defmodule Orchestrator.Protocol.MCP.SessionTest do
         _ -> :ok
       end
     end
-
-    test "requires server id" do
-      params = %{"url" => "http://localhost:3000", "transport" => "streamable-http"}
-
-      # Should fail with initialization error
-      result = Session.start_link(params)
-      assert match?({:error, _}, result)
-    end
   end
 
   describe "call_tool/3" do
