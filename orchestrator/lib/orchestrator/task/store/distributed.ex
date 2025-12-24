@@ -60,7 +60,9 @@ defmodule Orchestrator.Task.Store.Distributed do
   @spec subscribe(String.t()) :: map() | nil
   def subscribe(task_id) do
     case get(task_id) do
-      nil -> nil
+      nil ->
+        nil
+
       task ->
         TaskPubSub.subscribe(task_id)
         task
@@ -115,6 +117,7 @@ defmodule Orchestrator.Task.Store.Distributed do
           Map.get(update, "artifact") ||
             Map.get(update, "artifacts") ||
             Map.get(update, "artifactUpdate")
+
         merged = merge_artifact(task, artifact)
 
         case put(merged) do

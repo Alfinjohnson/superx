@@ -16,7 +16,8 @@ defmodule Orchestrator.Task.DistributedStoreTest do
 
       assert :ok = TaskStore.apply_status_update(update)
 
-      assert_receive {:status_update, %{"id" => ^task_id, "status" => %{"state" => "working"}}}, 200
+      assert_receive {:status_update, %{"id" => ^task_id, "status" => %{"state" => "working"}}},
+                     200
     end
 
     test "artifact updates propagate to subscribers" do
