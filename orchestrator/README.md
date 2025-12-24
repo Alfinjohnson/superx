@@ -9,7 +9,6 @@ The core Elixir application powering the SuperX Agentic Gateway. This document c
 - [Development Setup](#development-setup)
 - [Project Structure](#project-structure)
 - [Architecture Overview](#architecture-overview)
-- [Documentation](#documentation)
 - [Quick Reference](#quick-reference)
 
 ## Development Setup
@@ -17,8 +16,7 @@ The core Elixir application powering the SuperX Agentic Gateway. This document c
 ### Prerequisites
 
 - **Elixir 1.19+** / **OTP 28+**
-- **PostgreSQL 16+** (for full test suite)
-- **Docker** (recommended for database)
+- **Docker** (optional, for containerized deployment)
 
 ### Getting Started
 
@@ -27,29 +25,22 @@ The core Elixir application powering the SuperX Agentic Gateway. This document c
 mix deps.get
 mix compile
 
-# Quick start (memory mode - no database required)
-mix run --no-halt
-
-# With PostgreSQL (optional)
-docker compose -f ../docker-compose.yml up -d db
-mix ecto.setup
+# Start server (in-memory storage, no database required)
 mix run --no-halt
 ```
 
 ### Running Tests
 
 ```bash
-# Memory mode (fast, default)
-mix test
+# Run all tests (excluding stress tests)
+mix test --exclude stress
 
-# Include PostgreSQL-only tests (requires DB)
-mix test --include postgres_only
-
-# With coverage report
+# Run with coverage report
 mix coveralls
-```
 
-See [Testing Guide](docs/testing.md) for detailed test documentation.
+# Run stress tests (takes longer)
+mix test --only stress
+```
 
 ### Code Quality
 
@@ -57,11 +48,11 @@ See [Testing Guide](docs/testing.md) for detailed test documentation.
 # Format code
 mix format
 
-# Static analysis
-mix dialyzer
+# Compile with warnings as errors
+mix compile --warnings-as-errors
 
 # All checks
-mix format --check-formatted && mix dialyzer
+mix format --check-formatted && mix compile --warnings-as-errors && mix test --exclude stress
 ```
 
 ## Project Structure
@@ -72,55 +63,42 @@ orchestrator/
 │   └── orchestrator/
 │       ├── agent/              # Agent management
 │       │   ├── loader.ex       # YAML/ENV agent loading
-│       │   ├── registry.ex     # Agent registry (ETS/Postgres)
+│       │   ├── registry.ex     # Horde distributed registry
+│       │   ├── store.ex        # Agent config storage (ETS)
 │       │   ├── worker.ex       # Per-agent GenServer with circuit breaker
-│       │   └── supervisor.ex   # Agent worker supervision
+│       │   └── supervisor.ex   # Horde DynamicSupervisor
 │       │
 │       ├── task/               # Task management
-│       │   ├── store.ex        # Task persistence behavior
-│       │   ├── memory_store.ex # In-memory ETS implementation
-│       │   └── db_store.ex     # PostgreSQL implementation
+│       │   ├── store.ex        # Distributed task storage (Horde + ETS)
+│       │   ├── pubsub.ex       # Task event broadcasting
+│       │   └── push_config.ex  # Webhook configuration
 │       │
-│       ├── push/               # Push notifications
-│       │   ├── notifier.ex     # Async notification delivery
-│       │   ├── signer.ex       # HMAC/JWT/Token signing
-│       │   └── jwt.ex          # JWT generation & validation
+│       ├── infra/              # Infrastructure
+│       │   ├── http_client.ex  # Finch HTTP client
+│       │   ├── push_notifier.ex # Webhook delivery with retry
+│       │   └── sse_client.ex   # SSE streaming client
 │       │
-│       ├── rpc/                # JSON-RPC handlers
-│       │   ├── router.ex       # Method routing
-│       │   ├── handlers/       # Method implementations
-│       │   └── middleware.ex   # Request processing
+│       ├── protocol/           # Protocol handling
+│       │   ├── adapters/a2a.ex # A2A v0.3.0 adapter
+│       │   ├── envelope.ex     # Protocol-agnostic envelope
+│       │   └── methods.ex      # Method definitions
 │       │
-│       ├── cluster/            # Distributed clustering
-│       │   └── topology.ex     # libcluster configuration
-│       │
-│       ├── http_client.ex      # Finch HTTP client wrapper
-│       ├── router.ex           # Plug router (endpoints)
-│       ├── repo.ex             # Ecto repository
-│       └── application.ex      # OTP application entry
-│
-├── priv/
-│   └── db/
-│       └── migrations/         # Ecto database migrations
+│       ├── application.ex      # OTP Application entry
+│       └── router.ex           # Plug router (endpoints)
 │
 ├── test/
-│   ├── orchestrator/           # Unit tests by module
-│   ├── integration/            # Integration tests
+│   ├── agent/                  # Agent module tests
+│   ├── task/                   # Task module tests
+│   ├── infra/                  # Infrastructure tests
+│   ├── integration/            # SSE streaming integration tests
+│   ├── stress/                 # Stress/load tests
 │   └── support/                # Test helpers
 │
-├── config/
-│   ├── config.exs              # Compile-time configuration
-│   ├── dev.exs                 # Development overrides
-│   ├── test.exs                # Test environment
-│   ├── prod.exs                # Production settings
-│   └── runtime.exs             # Runtime configuration (env vars)
-│
-└── docs/                       # Developer documentation
-    ├── api.md                  # Complete API reference
-    ├── architecture.md         # System architecture
-    ├── configuration.md        # Environment variables
-    ├── testing.md              # Test guide
-    └── deployment.md           # Deployment guide
+└── config/
+    ├── config.exs              # Compile-time configuration
+    ├── test.exs                # Test environment
+    ├── prod.exs                # Production settings
+    └── runtime.exs             # Runtime configuration (env vars)
 ```
 
 ## Architecture Overview
@@ -129,18 +107,17 @@ orchestrator/
 
 ```
 Orchestrator.Application
-├── Orchestrator.Repo (PostgreSQL connection pool)
-├── Orchestrator.TaskStore.Supervisor
-│   └── Orchestrator.TaskStore (ETS or DB-backed)
-├── Orchestrator.Agent.Supervisor
-│   ├── Orchestrator.Agent.Registry
-│   └── Orchestrator.Agent.WorkerSupervisor
-│       ├── Agent.Worker (agent_1)
-│       ├── Agent.Worker (agent_2)
-│       └── ...
-├── Orchestrator.Push.Notifier
-├── Orchestrator.HttpClient (Finch pool)
-├── Orchestrator.Cluster.Topology (libcluster)
+├── Orchestrator.Task.Store (GenServer + ETS)
+├── Orchestrator.Task.PushConfig.Store (GenServer + ETS)
+├── Orchestrator.Agent.Store (GenServer + ETS)
+├── Orchestrator.Agent.Registry (Horde.Registry)
+├── Orchestrator.Agent.Supervisor (Horde.DynamicSupervisor)
+│   ├── Agent.Worker (agent_1)
+│   ├── Agent.Worker (agent_2)
+│   └── ...
+├── Orchestrator.Infra.PushNotifier (GenServer)
+├── Orchestrator.Infra.HttpClient (Finch pool)
+├── Orchestrator.Infra.Cluster (libcluster)
 └── Bandit (HTTP server)
 ```
 
@@ -150,9 +127,9 @@ Orchestrator.Application
 |---------|---------------|---------|
 | **Circuit Breaker** | `Agent.Worker` | Prevent cascade failures to unhealthy agents |
 | **Backpressure** | `Agent.Worker` | Limit concurrent requests per agent |
-| **Behavior Pattern** | `TaskStore`, `AgentRegistry` | Swap memory/postgres implementations |
-| **Registry** | `Agent.Registry` | Track agents and their workers |
-| **Supervisor** | Throughout | Fault tolerance via OTP supervision |
+| **Distributed Registry** | `Horde.Registry` | Track agents across cluster nodes |
+| **Distributed Supervisor** | `Horde.DynamicSupervisor` | Supervise workers across cluster |
+| **ETS Storage** | `Task.Store`, `Agent.Store` | Fast in-memory data access |
 
 ### Request Flow
 
@@ -163,16 +140,6 @@ HTTP Request → Router → RPC.Router → Handler → Agent.Worker → Remote A
      ↓
 Push.Notifier → Webhook (async)
 ```
-
-## Documentation
-
-| Document | Description |
-|----------|-------------|
-| [API Reference](docs/api.md) | Complete JSON-RPC API with examples |
-| [Architecture](docs/architecture.md) | Detailed system design |
-| [Configuration](docs/configuration.md) | All environment variables |
-| [Testing Guide](docs/testing.md) | Running and writing tests |
-| [Deployment](docs/deployment.md) | Production deployment guide |
 
 ## Quick Reference
 
@@ -185,19 +152,14 @@ mix compile                   # Compile project
 mix run --no-halt             # Start server
 iex -S mix                    # Interactive shell
 
-# Database
-mix ecto.create               # Create database
-mix ecto.migrate              # Run migrations
-mix ecto.reset                # Drop + create + migrate
-
 # Testing
-mix test                      # Run tests
-mix test --only integration   # Integration tests only
+mix test                      # Run tests (excludes stress by default)
+mix test --exclude stress     # Explicitly exclude stress tests
+mix test --only stress        # Run stress tests only
 mix coveralls                 # Coverage report
 
 # Production
 mix release                   # Build release
-mix phx.digest                # Compile assets
 ```
 
 ### Key Environment Variables
@@ -206,9 +168,9 @@ mix phx.digest                # Compile assets
 |----------|---------|-------------|
 | `PORT` | 4000 | HTTP server port |
 | `AGENTS_FILE` | — | Path to agents YAML |
-| `DATABASE_URL` | — | PostgreSQL connection (optional) |
-
-See [Configuration Guide](docs/configuration.md) for complete list.
+| `SECRET_KEY_BASE` | — | Secret for crypto ops (required in prod) |
+| `LOG_LEVEL` | info | Logging level: debug, info, warning, error |
+| `CLUSTER_STRATEGY` | — | Clustering: gossip, dns, kubernetes |
 
 ### API Quick Examples
 
@@ -247,7 +209,7 @@ See [API Reference](docs/api.md) for complete documentation.
 - Use `mix format` before committing
 - Add `@moduledoc` and `@doc` for public functions
 - Tag integration tests with `@tag :integration`
-- Tag postgres-only tests with `@moduletag :postgres_only`
+- Tag stress tests with `@moduletag :stress`
 
 ## License
 

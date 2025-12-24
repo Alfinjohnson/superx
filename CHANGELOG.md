@@ -9,28 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Hybrid task management** - OTP-managed in-memory tasks by default; Postgres archival planned
-- **Per-request webhooks** - Pass webhook URL in `metadata.webhook` for ephemeral notifications without pre-configuration
-- Streaming integration test suite for `message/stream` and `tasks/subscribe` endpoints
-- Advanced stress testing scenarios for concurrent streaming connections
+- **Pure OTP in-memory task management** - Tasks stored via Horde + ETS, no external dependencies
+- **Per-request webhooks** - Pass webhook URL in `metadata.webhook` for ephemeral notifications
+- **SSE streaming integration tests** - Production-grade tests for `message/stream` and `tasks/subscribe`
+- Stress testing scenarios for concurrent streaming connections
 - Long-running stream stability tests (60s+ sustained connections)
-- High-frequency SSE event flooding tests
-- Client disconnect mid-stream error handling tests
-- Stream initialization timeout tests
-- Simplified persistence surface; removed task storage mode helpers
 
 ### Changed
 
-- Removed `SUPERX_TASK_STORAGE`; hybrid mode is default and requires no toggle
+- **Removed PostgreSQL dependency** - SuperX now runs without any database
+- Simplified architecture: removed Ecto, Repo, migrations, and all postgres adapters
 - `tasks.get` and `tasks.subscribe` always available; return -32004 when task is missing
-- `PushConfig.deliver_event/3` now accepts optional per-request webhook configuration
+- `PushConfig.deliver_event/3` accepts optional per-request webhook configuration
 - Envelope struct includes `webhook` field for per-request webhook passthrough
-- Moved CHANGELOG.md to repository root for better visibility
-- Updated test documentation to reflect actual streaming test structure
+- Updated Docker image to exclude database dependencies
+- Simplified CI pipeline - single test job, no database services required
+- Health endpoint returns `"n/a"` for db status (memory mode only)
+
+### Removed
+
+- PostgreSQL support and all related code:
+  - `Orchestrator.Repo` module
+  - `priv/db/migrations/` directory
+  - Ecto schemas (`Schema.Task`, `Schema.Agent`, `Schema.PushConfig`)
+  - PostgreSQL adapters for task, agent, and push config storage
+  - `ecto_sql`, `postgrex` dependencies
+  - `SUPERX_PERSISTENCE` environment variable (always in-memory now)
+  - `DATABASE_URL`, `DB_HOST`, `DB_*` environment variables
+- Outdated documentation files (architecture.md, configuration.md, deployment.md, etc.)
 
 ### Fixed
 
-- Health endpoint now correctly handles memory persistence mode (returns "n/a" for db status)
+- SSE client correctly handles Finch accumulator pattern (returns state, not `{:cont, state}`)
+- Fixed compiler warnings in test files (unused variables, unreachable clauses)
 
 ## [0.1.0] - 2024-12-23
 
@@ -48,11 +59,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Backpressure with configurable max in-flight requests
   - Automatic agent health monitoring
 
-- **Persistence**
-  - Dual persistence modes: PostgreSQL (default) and Memory (stateless)
-  - Agent loader from `agents.yml`, config, and environment variables
-  - Task and push config persistence with JSONB storage
-
 - **Push Notifications**
   - Webhook delivery with retry logic
   - HMAC-SHA256 request signing
@@ -66,12 +72,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Observability**
   - Comprehensive telemetry events for agents, tasks, and push notifications
-  - Health endpoint with database and cluster status
+  - Health endpoint with cluster status
   - Request logging with request IDs
 
 - **Developer Experience**
   - Well-documented README with examples
-  - 210 tests with both memory and PostgreSQL modes
+  - 210+ tests with comprehensive coverage
   - Factory helpers for testing
   - Stress test suite
 

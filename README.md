@@ -21,16 +21,16 @@ SuperX is an **experimental Agentic Gateway Orchestrator** that helps AI agents 
 | Feature | Description |
 |---------|-------------|
 | **A2A Protocol Support** | Full support for Google's Agent-to-Agent protocol (more protocols coming soon) |
-| **Hybrid Task Management** | OTP-distributed in-memory tasks; optional Postgres archival (future) |
+| **In-Memory Task Management** | OTP-distributed task storage via Horde – zero external dependencies |
 | **Intelligent Routing** | Route messages to agents based on skills, availability, and load |
-| **Task Management** | Create, track, and manage tasks (optional persistence) |
+| **Task Management** | Create, track, and manage tasks across the cluster |
 | **Streaming** | Real-time message streaming via Server-Sent Events (SSE) |
 | **Per-Request Webhooks** | Pass webhook URLs in requests for ephemeral notifications |
 | **Push Notifications** | Webhook-based notifications with HMAC, JWT, or token auth |
 | **Agent Registry** | Dynamic agent registration and discovery |
 | **Circuit Breaker** | Automatic failure detection with configurable thresholds |
 | **Backpressure** | Per-agent concurrency limits prevent overload |
-| **Horizontal Scaling** | OTP-distributed in-memory or PostgreSQL-backed for multi-node deployments |
+| **Horizontal Scaling** | OTP-distributed in-memory storage scales horizontally |
 | **Clustering** | Erlang node clustering via gossip, DNS, or Kubernetes |
 
 ## Quick Start
@@ -42,8 +42,8 @@ SuperX is an **experimental Agentic Gateway Orchestrator** that helps AI agents 
 git clone https://github.com/your-org/superx.git
 cd superx
 
-# Start with PostgreSQL (production mode)
-docker compose up -d
+# Start the orchestrator
+docker compose up -d orchestrator
 
 # Check health
 curl http://localhost:4000/health
@@ -198,48 +198,44 @@ curl -X POST http://localhost:4000/rpc \
 
 ## Deployment
 
-### Persistence Modes
+### Storage
 
-| Mode | Use Case | Data Durability | Task Storage |
-|------|----------|-----------------|--------------|
-| **Hybrid** (default) | Most deployments, edge, multi-node | In-memory (OTP-managed) | Tasks stored and streamed; optional archival (future) |
-| **PostgreSQL** | Audit, compliance, long-term storage | Persistent (shared DB) | Full task history |
+SuperX uses **OTP-distributed in-memory storage** via Horde. Tasks are automatically replicated across cluster nodes.
 
-**Storage Configuration:**
+| Feature | Description |
+|---------|-------------|
+| **Zero Dependencies** | No external database required |
+| **Distributed** | Tasks replicated across cluster nodes |
+| **Low Latency** | In-memory access, no DB queries |
+| **Ephemeral** | Tasks lost on full cluster restart |
 
-Hybrid mode is the default. Tasks are always available via tasks.get/subscribe with OTP-managed in-memory storage. No configuration needed - just run the server.
-
-**PostgreSQL (optional - future archival):**
-
-Set `DATABASE_URL` or `DB_HOST` environment variables to enable PostgreSQL for task archival.
+> **Note:** For audit/compliance requiring persistent storage, consider forwarding task events to your own data store via webhooks.
 
 ### Docker
+
 ```bash
-# Production mode with PostgreSQL
+# Production mode
 docker compose up orchestrator
 
 # Development mode with hot reload
 docker compose up orchestrator-dev
-
-
 ```
 
 ### Environment Configuration
 
-Key environment variables (see [Configuration Guide](orchestrator/docs/configuration.md) for complete list):
+Key environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | 4000 | HTTP server port |
-| `DATABASE_URL` | — | PostgreSQL connection string (optional) |
 | `AGENTS_FILE` | — | Path to agents YAML configuration |
 | `CLUSTER_STRATEGY` | — | Clustering: `gossip`, `dns`, `kubernetes` |
+| `SECRET_KEY_BASE` | — | Secret key for cryptographic operations (required in prod) |
 
 ### Production Deployment
 
 ```bash
 # Set required environment variables
-export DATABASE_URL="ecto://user:pass@db.example.com/superx_prod"
 export PORT=4000
 export AGENTS_FILE=/etc/superx/agents.yml
 export SECRET_KEY_BASE=$(openssl rand -base64 64)
@@ -249,7 +245,6 @@ docker pull ghcr.io/alfinjohnson/superx:latest
 docker run -d \
   --name superx \
   -p 4000:4000 \
-  -e DATABASE_URL \
   -e PORT \
   -e AGENTS_FILE \
   -e SECRET_KEY_BASE \
@@ -316,14 +311,11 @@ superx/
 ├── orchestrator/           # Main Elixir application
 │   ├── lib/               # Source code
 │   │   └── orchestrator/  # Core modules
-│   ├── test/              # Test suite (210 tests)
-│   ├── priv/              # Migrations and static assets
-│   └── docs/              # Developer documentation
-├── docs/                  # Project documentation
-│   └── roadmap.md        # Development roadmap
+│   └── test/              # Test suite (210+ tests)
+├── docs/                  # A2A protocol documentation
+│   └── a2a-v030/         # A2A v0.3.0 specification
 ├── samples/              # Sample configurations
 │   └── agents.yml        # Example agent configuration
-├── Dockerfile            # Production container build
 └── docker-compose.yml    # Local development setup
 ```
 
@@ -334,29 +326,27 @@ superx/
 - **[Quick Start](#quick-start)** - Get running in minutes
 - **[Architecture](#architecture)** - System design overview
 - **[Deployment](#deployment)** - Production deployment guide
-- **[Roadmap](docs/roadmap.md)** - Future development plans
 
 ### Developer Documentation
 
-- **[Orchestrator README](orchestrator/README.md)** - Development setup and architecture
-- **[API Reference](orchestrator/docs/api.md)** - Complete RPC API documentation
-- **[Configuration](orchestrator/docs/configuration.md)** - All environment variables
-- **[Testing Guide](orchestrator/docs/testing.md)** - Running and writing tests
-- **[Deployment Guide](orchestrator/docs/deployment.md)** - Production deployment
+- **[Orchestrator README](orchestrator/README.md)** - Development setup and contribution guide
+- **[CHANGELOG](CHANGELOG.md)** - Version history and changes
+- **[CONTRIBUTING](CONTRIBUTING.md)** - Contribution guidelines
 
 ### Protocol Specification
 
 - **[A2A Protocol](https://github.com/google/A2A)** - Google's Agent-to-Agent protocol specification
 - **[A2A Documentation](https://google.github.io/A2A/)** - Official protocol documentation
 - **[A2A Python Samples](https://github.com/google/A2A/tree/main/samples/python)** - Example agent implementations
+- **[A2A v0.3.0 Spec](docs/a2a-v030/specification.md)** - Local copy of A2A specification
 
 ## Tech Stack
 
 | Component | Technology |
 |-----------|------------|
-| **Runtime** | Elixir 1.19 / OTP 28 |
-| **Database** | PostgreSQL 16 |
+| **Runtime** | Elixir 1.19+ / OTP 28+ |
 | **HTTP Server** | Bandit |
+| **Distribution** | Horde (distributed registry/supervisor) |
 | **Clustering** | libcluster |
 | **Container** | Docker (multi-stage build) |
 
