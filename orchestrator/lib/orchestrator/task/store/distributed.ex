@@ -48,7 +48,9 @@ defmodule Orchestrator.Task.Store.Distributed do
             %{} = t -> Map.put(t, "id", Map.get(t, "id") || task_id)
             other -> other
           end
-        _ -> nil
+
+        _ ->
+          nil
       end
     end)
   end

@@ -37,7 +37,9 @@ defmodule Orchestrator.Task.Store.Memory do
           %{} = t -> Map.put(t, "id", Map.get(t, "id") || task_id)
           other -> other
         end
-      [] -> nil
+
+      [] ->
+        nil
     end
   end
 
