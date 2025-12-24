@@ -19,6 +19,10 @@ defmodule Orchestrator.TelemetryHelper do
   Attach a telemetry handler that sends events to the current process.
 
   Returns a unique handler ID for cleanup.
+
+  Note: The telemetry library emits a warning about local functions,
+  but this is unavoidable for test handlers that need to capture the
+  calling process. The warning is informational only.
   """
   def attach(event_prefix) do
     handler_id = "test-#{:erlang.unique_integer([:positive])}"

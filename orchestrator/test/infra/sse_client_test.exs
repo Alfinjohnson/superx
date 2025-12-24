@@ -309,7 +309,7 @@ defmodule Orchestrator.Infra.SSEClientTest do
   # Helper functions for testing SSE behavior
   # -------------------------------------------------------------------
 
-  defp start_sse_with_stub(opts) do
+  defp start_sse_with_stub(_opts) do
     # Simplified stub - just return a task that exits immediately
     Task.start_link(fn ->
       # Simulate SSE client behavior

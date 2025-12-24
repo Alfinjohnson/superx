@@ -7,7 +7,6 @@ defmodule Orchestrator.Infra.HttpClientTest do
 
   use ExUnit.Case, async: false
 
-  alias Orchestrator.Infra.HttpClient
   alias Orchestrator.TelemetryHelper
 
   # We'll use Req's built-in testing capabilities with plugs

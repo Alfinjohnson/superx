@@ -91,14 +91,14 @@ defmodule Orchestrator.Infra.SSEClient do
 
   defp handle_chunk({:status, status}, state) do
     if status in 200..299 do
-      {:cont, state}
+      state
     else
       send(state.reply_to, {:stream_error, state.rpc_id, status})
-      {:halt, state}
+      state
     end
   end
 
-  defp handle_chunk({:headers, _headers}, state), do: {:cont, state}
+  defp handle_chunk({:headers, _headers}, state), do: state
 
   defp handle_chunk({:data, chunk}, state) do
     data = state.buffer <> IO.iodata_to_binary(chunk)
@@ -122,11 +122,11 @@ defmodule Orchestrator.Infra.SSEClient do
         end
       end)
 
-    {:cont, %{new_state | buffer: rest}}
+    %{new_state | buffer: rest}
   end
 
   defp handle_chunk(:done, state) do
-    {:halt, state}
+    state
   end
 
   defp split_events(data) do

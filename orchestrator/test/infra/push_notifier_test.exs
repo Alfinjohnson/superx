@@ -159,7 +159,7 @@ defmodule Orchestrator.Infra.PushNotifierTest do
       counter = :counters.new(1, [:atomics])
 
       Req.Test.stub(Orchestrator.PushTest, fn conn ->
-        attempt = :counters.add(counter, 1, 1)
+        _attempt = :counters.add(counter, 1, 1)
 
         if :counters.get(counter, 1) < 2 do
           conn |> Plug.Conn.send_resp(500, "Server error")
@@ -235,7 +235,6 @@ defmodule Orchestrator.Infra.PushNotifierTest do
 
     test "HMAC signature is computed correctly" do
       secret = "my-hmac-secret"
-      captured_data = %{signature: nil, timestamp: nil, body: nil}
       agent = self()
 
       Req.Test.stub(Orchestrator.PushTest, fn conn ->
@@ -603,10 +602,8 @@ defmodule Orchestrator.Infra.PushNotifierTest do
 
   defp maybe_jwt_test(headers, %{"jwtSecret" => secret} = cfg, body)
        when is_binary(secret) and secret != "" do
-    case sign_jwt_test(secret, cfg, body) do
-      {:ok, token} -> [{"authorization", "Bearer " <> token} | headers]
-      {:error, _} -> headers
-    end
+    {:ok, token} = sign_jwt_test(secret, cfg, body)
+    [{"authorization", "Bearer " <> token} | headers]
   end
 
   defp maybe_jwt_test(headers, _cfg, _body), do: headers
