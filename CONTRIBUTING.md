@@ -11,8 +11,8 @@ Please be respectful and constructive in all interactions. We welcome contributi
 ### Prerequisites
 
 - Elixir 1.19+
-- PostgreSQL 14+ (for full test suite)
-- Docker (optional, for running PostgreSQL)
+- OTP 28+
+- Docker (optional, for MCP Docker transport testing)
 
 ### Setup
 
@@ -24,18 +24,11 @@ cd orchestrator
 # Install dependencies
 mix deps.get
 
-# Start PostgreSQL (if using Docker)
-docker run --name superx-postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=superx_dev \
-  -p 5432:5432 -d postgres:16-alpine
-
-# Create and migrate database
-mix ecto.create
-mix ecto.migrate
+# Compile
+mix compile
 
 # Run tests
-mix test
+mix test --exclude stress
 ```
 
 ## Development Workflow
@@ -43,14 +36,20 @@ mix test
 ### Running Tests
 
 ```bash
-# Run tests in memory mode (default, no DB required)
+# Run tests (excludes stress tests by default in CI)
+mix test --exclude stress
+
+# Run all tests including stress tests (~65 seconds)
 mix test
 
-# Include PostgreSQL-only tests (requires DB)
-mix test --include postgres_only
+# Run only stress tests
+mix test test/stress/
 
 # Run with coverage
-mix coveralls
+mix test --cover --exclude stress
+
+# Run specific test file
+mix test test/protocol/mcp/session_test.exs
 ```
 
 ### Code Style
@@ -59,6 +58,7 @@ We use the default Elixir formatter. Before committing:
 
 ```bash
 mix format
+mix format --check-formatted  # CI check
 ```
 
 ### Type Checking
@@ -107,11 +107,11 @@ Examples:
 
 ### PR Checklist
 
-- [ ] Tests pass (`mix test`)
-- [ ] Code is formatted (`mix format`)
+- [ ] Tests pass (`mix test --exclude stress`)
+- [ ] Code is formatted (`mix format --check-formatted`)
 - [ ] Documentation updated (if applicable)
 - [ ] CHANGELOG.md updated (for user-facing changes)
-- [ ] No compiler warnings
+- [ ] No compiler warnings (`mix compile --warnings-as-errors`)
 
 ## Architecture
 
@@ -122,18 +122,25 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for an overview of the codebase
 | Module | Purpose |
 |--------|---------|
 | `Orchestrator.Router` | HTTP endpoint handling |
-| `Orchestrator.Agent.*` | Agent management domain |
-| `Orchestrator.Task.*` | Task management domain |
-| `Orchestrator.Protocol.*` | A2A protocol handling |
-| `Orchestrator.Infra.*` | Infrastructure (HTTP, SSE, Push) |
+| `Orchestrator.Agent.*` | Agent management (Store, Loader, Worker) |
+| `Orchestrator.Task.*` | Task management (Store, Streaming) |
+| `Orchestrator.Protocol.A2A.*` | A2A protocol (Adapter, Proxy, PushNotifier) |
+| `Orchestrator.Protocol.MCP.*` | MCP protocol (Session, Supervisor, Transports) |
+| `Orchestrator.Web.*` | Web layer (Streaming, AgentCard) |
+
+### Protocol Support
+
+- **A2A v0.3.0** - Agent-to-Agent protocol for agent discovery and task execution
+- **MCP v2024-11-05** - Model Context Protocol with multi-transport support (HTTP/SSE, STDIO, Docker)
 
 ## Testing Guidelines
 
 ### Test Organization
 
 - `test/` - Unit and integration tests
-- `test/stress/` - Performance and stress tests
+- `test/stress/` - Performance and stress tests (tagged with `@moduletag :stress`)
 - `test/support/` - Test helpers and factories
+- `test/protocol/` - Protocol-specific tests (A2A, MCP)
 
 ### Writing Tests
 
@@ -156,12 +163,13 @@ defmodule MyModuleTest do
 end
 ```
 
-### PostgreSQL-Specific Tests
+### Stress Tests
 
-Tag tests that require PostgreSQL:
+Tag long-running stress tests:
 
 ```elixir
-@moduletag :postgres_only
+@moduletag :stress
+@tag timeout: 120_000
 ```
 
 ## Questions?

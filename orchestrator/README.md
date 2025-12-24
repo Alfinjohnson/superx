@@ -54,17 +54,17 @@ mix run --no-halt
 ### Running Tests
 
 ```bash
-# Run all tests (excludes stress tests by default)
-mix test
+# Run all tests (excludes stress tests by default in CI)
+mix test --exclude stress
 
-# Run all tests including stress tests
-mix test --include stress
+# Run all tests including stress tests (~65s)
+mix test
 
 # Run specific test file
 mix test test/agent/worker_test.exs
 
 # Run with coverage report
-mix coveralls
+mix test --cover --exclude stress
 ```
 
 ### Code Quality
@@ -108,10 +108,10 @@ mix format --check-formatted && mix compile --warnings-as-errors && mix test
 | Task | Command |
 |------|---------|
 | Start with hot reload | `iex -S mix` |
-| Run tests once | `mix test` |
-| Watch tests | `mix test --watch` |
+| Run tests once | `mix test --exclude stress` |
+| Run all tests (incl. stress) | `mix test` |
 | Format code | `mix format` |
-| Full quality check | `mix format && mix compile --warnings-as-errors && mix test` |
+| Full quality check | `mix format && mix compile --warnings-as-errors && mix test --exclude stress` |
 
 ## Project Structure
 
@@ -130,40 +130,50 @@ lib/orchestrator/
 │   ├── store.ex            # ← Multi-turn conversation state
 │   ├── pubsub.ex           # ← Event broadcasting
 │   └── push_config.ex      # ← Webhook config
-├── infra/
-│   ├── http_client.ex      # ← HTTP calls to agents
-│   ├── push_notifier.ex    # ← Webhook delivery logic
-│   └── sse_client.ex       # ← Streaming responses
 ├── protocol/
-│   ├── adapters/
-│   │   ├── a2a.ex          # ← A2A protocol adapter
-│   │   └── mcp.ex          # ← MCP protocol adapter
+│   ├── behaviour.ex        # ← Protocol adapter interface
 │   ├── envelope.ex         # ← Protocol-agnostic message format
 │   ├── registry.ex         # ← Protocol version registry
-│   └── methods.ex          # ← Method definitions & specs
-└── mcp/                     # ← MCP protocol implementation
-    ├── session.ex          # ← Stateful MCP session GenServer
-    ├── client_handler.ex   # ← Bidirectional request handling
-    ├── supervisor.ex       # ← MCP session supervision
-    └── transport/
-        ├── behaviour.ex    # ← Transport abstraction
-        ├── http.ex         # ← HTTP + SSE transport
-        └── stdio.ex        # ← STDIO transport for local servers
+│   ├── methods.ex          # ← Method definitions & specs
+│   ├── a2a/                # ← A2A protocol implementation
+│   │   ├── adapter.ex      # ← A2A wire format translation
+│   │   ├── proxy.ex        # ← Request forwarding to A2A agents
+│   │   ├── push_notifier.ex # ← Webhook delivery logic
+│   │   └── template.ex     # ← Template for new A2A versions
+│   └── mcp/                # ← MCP protocol implementation
+│       ├── adapter.ex      # ← MCP wire format translation
+│       ├── session.ex      # ← Stateful MCP session GenServer
+│       ├── supervisor.ex   # ← MCP session supervision
+│       ├── client_handler.ex # ← Bidirectional request handling
+│       └── transport/
+│           ├── behaviour.ex # ← Transport abstraction
+│           ├── http.ex     # ← HTTP + SSE transport
+│           ├── stdio.ex    # ← STDIO transport for local servers
+│           └── docker.ex   # ← Docker/OCI container transport
+├── web/
+│   ├── streaming.ex        # ← SSE streaming handlers
+│   └── agent_card.ex       # ← Agent card endpoints
+└── infra/
+    ├── http_client.ex      # ← HTTP calls to agents
+    └── sse_client.ex       # ← Streaming responses
 
 test/
 ├── agent/                  # ← Agent tests
 ├── task/                   # ← Task management tests
-├── infra/                  # ← HTTP, webhooks, streaming tests
+├── protocol/               # ← Protocol-specific tests
+│   ├── adapters/           # ← Adapter tests (A2A, MCP)
+│   └── mcp/                # ← MCP session, supervisor, transport tests
+├── web/                    # ← Router, streaming tests
 ├── integration/            # ← End-to-end tests with real agents
-└── stress/                 # ← Load/chaos testing
+└── stress/                 # ← Load/chaos testing (tagged :stress)
 ```
 
 **What to edit for common tasks:**
 - **New RPC method?** → `router.ex` + `protocol/methods.ex` + tests
-- **New protocol?** → `protocol/adapters/` + `protocol/registry.ex`
+- **New protocol?** → `protocol/` + `protocol/behaviour.ex`
 - **Fix routing/circuit breaker?** → `agent/worker.ex`
 - **Add task persistence?** → `task/store.ex`
-- **Add MCP transport?** → `mcp/transport/` + `mcp/transport/behaviour.ex`
+- **Add MCP transport?** → `protocol/mcp/transport/` + `behaviour.ex`
 - **New feature?** → Create module in subdirectory + mirror in test/
 
 ## Common Development Tasks
@@ -260,11 +270,11 @@ Orchestrator.Application
 │   ├── Agent.Worker (per-agent GenServer with circuit breaker)
 │   ├── Agent.Worker (per-agent GenServer with circuit breaker)
 │   └── ...
-├── Orchestrator.MCP.Supervisor (MCP session management)
-│   ├── MCP.Session (per-MCP-agent stateful session)
-│   ├── MCP.Session (per-MCP-agent stateful session)
+├── Orchestrator.Protocol.MCP.Supervisor (MCP session management)
+│   ├── Protocol.MCP.Session (per-MCP-agent stateful session)
+│   ├── Protocol.MCP.Session (per-MCP-agent stateful session)
 │   └── ...
-├── Orchestrator.Infra.PushNotifier (GenServer + async webhook delivery)
+├── Orchestrator.Protocol.A2A.PushNotifier (GenServer + async webhook delivery)
 ├── Orchestrator.Infra.HttpClient (Finch connection pool)
 ├── Orchestrator.Infra.Cluster (libcluster auto-discovery)
 └── Bandit (HTTP server on :4000)
@@ -279,19 +289,19 @@ Orchestrator.Application
 | **Distributed Registry** | `Horde.Registry` | Track agents across cluster nodes |
 | **Distributed Supervisor** | `Horde.DynamicSupervisor` | Supervise workers across cluster |
 | **ETS Storage** | `Task.Store`, `Agent.Store` | Fast in-memory data access |
-| **Protocol Adapters** | `Protocol.Adapters.*` | Pluggable protocol support (A2A, MCP) |
-| **Transport Abstraction** | `MCP.Transport.Behaviour` | Pluggable MCP transports (HTTP, STDIO) |
-| **Stateful Sessions** | `MCP.Session` | Persistent MCP connections with caching |
+| **Protocol Adapters** | `Protocol.A2A.Adapter`, `Protocol.MCP.Adapter` | Pluggable protocol support |
+| **Transport Abstraction** | `Protocol.MCP.Transport.Behaviour` | Pluggable MCP transports (HTTP, STDIO, Docker) |
+| **Stateful Sessions** | `Protocol.MCP.Session` | Persistent MCP connections with caching |
 
 ### Request Flow
 
 **A2A Protocol:**
 ```
-HTTP Request → Router → RPC.Router → Handler → Agent.Worker → Remote Agent
+HTTP Request → Router → RPC.Router → Handler → Agent.Worker → A2A.Proxy → Remote Agent
      ↓                                              ↓
   Response  ←──────────────────────────────────────┘
      ↓
-Push.Notifier → Webhook (async)
+A2A.PushNotifier → Webhook (async)
 ```
 
 **MCP Protocol:**
@@ -300,7 +310,7 @@ HTTP Request → Router → Handler → Agent.Worker → MCP.Session → Transpo
      ↓                                              ↓
   Response  ←──────────────────────────────────────┘
      ↓                                              ↑
-Push.Notifier → Webhook (async)               (HTTP/SSE/STDIO)
+A2A.PushNotifier → Webhook (async)             (HTTP/SSE/STDIO/Docker)
 ```
 
 ## Quick Reference
@@ -315,16 +325,15 @@ mix run --no-halt             # Start server (in-memory, no DB needed)
 iex -S mix                    # Interactive shell with dependencies
 
 # Testing  
-mix test                      # Run all tests
-mix test --include stress     # Include stress tests
-mix coveralls                 # Coverage report
+mix test --exclude stress     # Run tests (default for CI)
+mix test                      # Run all tests including stress (~65s)
+mix test --cover --exclude stress  # Coverage report
 
 # Quality
 mix format                    # Format code
 mix compile --warnings-as-errors  # Check for warnings
 
 # Production
-mix escript.build             # Build standalone executable
 mix release                   # Build release (see rel/)
 ```
 

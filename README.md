@@ -411,7 +411,15 @@ superx/
 ├── orchestrator/           # Main Elixir application
 │   ├── lib/               # Source code
 │   │   └── orchestrator/  # Core modules
-│   └── test/              # Test suite (230+ tests)
+│   │       ├── agent/     # Agent management (Store, Loader, Worker)
+│   │       ├── task/      # Task management (Store, Streaming)
+│   │       ├── protocol/  # Protocol implementations
+│   │       │   ├── a2a/   # A2A protocol (Adapter, Proxy, PushNotifier)
+│   │       │   └── mcp/   # MCP protocol (Session, Supervisor, Transports)
+│   │       └── web/       # Web layer (Router, Streaming, AgentCard)
+│   └── test/              # Test suite (276+ tests)
+│       ├── protocol/      # Protocol-specific tests
+│       └── stress/        # Stress and performance tests
 ├── docs/                  # Protocol documentation
 │   └── a2a-v030/         # A2A v0.3.0 specification
 ├── samples/              # Sample configurations
@@ -455,13 +463,13 @@ Built with **Elixir and OTP** — designed for exactly what we need: long-runnin
 | **Distributed State** | Horde (distributed registry, supervisor) |
 | **Clustering** | libcluster (gossip, DNS, Kubernetes) |
 | **Container** | Docker (multi-stage build, ~65MB image) |
-| **Testing** | ExUnit (230+ tests) |
+| **Testing** | ExUnit (276+ tests, 32%+ coverage) |
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Run tests (`mix test`)
+3. Run tests (`mix test --exclude stress`)
 4. Commit changes (`git commit -m 'Add amazing feature'`)
 5. Push to branch (`git push origin feature/amazing-feature`)
 6. Open a Pull Request

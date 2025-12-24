@@ -13,19 +13,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Protocol adapter for MCP JSON-RPC messages
   - HTTP transport (streamable-http, SSE) for remote MCP servers
   - STDIO transport for local MCP server processes
+  - Docker/OCI transport for containerized MCP servers
   - Stateful MCP.Session GenServer for connection management
   - Bidirectional request handling (sampling, roots, elicitation)
   - Environment variable expansion in agent configuration (`${VAR_NAME}`)
   - MCP registry file support for bulk server imports
+- **Protocol-centric module structure** - Reorganized to `Orchestrator.Protocol.{A2A,MCP}.*`
+  - `Protocol.A2A.Adapter` - A2A wire format translation
+  - `Protocol.A2A.Proxy` - Request forwarding to A2A agents
+  - `Protocol.A2A.PushNotifier` - Webhook delivery
+  - `Protocol.MCP.Adapter` - MCP wire format translation
+  - `Protocol.MCP.Session` - Stateful session management
+  - `Protocol.MCP.Supervisor` - Session lifecycle supervision
+  - `Protocol.MCP.Transport.*` - HTTP, STDIO, Docker transports
 - **Pure OTP in-memory task management** - Tasks stored via Horde + ETS, no external dependencies
 - **Per-request webhooks** - Pass webhook URL in `metadata.webhook` for ephemeral notifications
 - **SSE streaming integration tests** - Production-grade tests for `message/stream` and `tasks/subscribe`
 - Stress testing scenarios for concurrent streaming connections
 - Long-running stream stability tests (60s+ sustained connections)
+- Comprehensive MCP protocol test coverage (adapters, session, supervisor, transports)
 
 ### Changed
 
 - **Removed PostgreSQL dependency** - SuperX now runs without any database
+- **Protocol modules restructured** for better organization and extensibility
+- Backward compatibility maintained via module aliases (old imports still work)
 - Simplified architecture: removed Ecto, Repo, migrations, and all postgres adapters
 - `tasks.get` and `tasks.subscribe` always available; return -32004 when task is missing
 - `PushConfig.deliver_event/3` accepts optional per-request webhook configuration
@@ -33,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated Docker image to exclude database dependencies
 - Simplified CI pipeline - single test job, no database services required
 - Health endpoint returns `"n/a"` for db status (memory mode only)
+- Circuit breaker recovery test optimized (3 cycles instead of 5, faster cooldown)
+- Test suite now 276+ tests with 32%+ coverage
 
 ### Removed
 
