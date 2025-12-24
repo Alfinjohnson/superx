@@ -94,3 +94,27 @@ agents:
   #       - "mcp/server:latest"
   #     env:
   #       API_KEY: ${MCP_API_KEY}
+
+  # Example: OCI package (auto-pulls Docker image)
+  # spotdb_mcp:
+  #   protocol: mcp
+  #   protocolVersion: 2024-11-05
+  #   transport:
+  #     package:
+  #       name: docker.io/aliengiraffe/spotdb:0.1.0
+  #       registryType: oci
+  #     env:
+  #       X_API_KEY: ${SPOTDB_API_KEY}
+
+  # Example: OCI package with resource limits
+  # heavy_mcp_server:
+  #   protocol: mcp
+  #   transport:
+  #     package:
+  #       name: ghcr.io/company/mcp-server:latest
+  #       registryType: oci
+  #     memory: "512m"
+  #     cpus: "0.5"
+  #     network: "host"
+  #     env:
+  #       DEBUG: "true"

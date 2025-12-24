@@ -44,6 +44,9 @@ defmodule Orchestrator.MCP.Session do
   alias Orchestrator.Protocol.Adapters.MCP, as: MCPAdapter
   alias Orchestrator.Utils
 
+  # Telemetry event prefix
+  @telemetry_prefix [:orchestrator, :mcp]
+
   defstruct [
     :server_id,
     :server_config,
@@ -156,6 +159,17 @@ defmodule Orchestrator.MCP.Session do
   end
 
   @doc """
+  Get a synthesized agent card for this MCP server.
+
+  Returns an agent card compatible with A2A discovery format,
+  built from the MCP server's capabilities, tools, resources, and prompts.
+  """
+  @spec get_agent_card(GenServer.server()) :: {:ok, map()} | {:error, term()}
+  def get_agent_card(session) do
+    GenServer.call(session, :get_agent_card)
+  end
+
+  @doc """
   Close the session.
   """
   @spec close(GenServer.server()) :: :ok
@@ -170,7 +184,19 @@ defmodule Orchestrator.MCP.Session do
   @impl true
   def init(server_config) do
     server_id = server_config["id"]
-    transport_config = Transport.parse_config(server_config)
+
+    # Parse transport config (may pull Docker images for OCI packages)
+    case Transport.parse_config(server_config) do
+      {:ok, transport_config} ->
+        init_with_transport(server_id, server_config, transport_config)
+
+      {:error, reason} ->
+        Logger.error("Failed to initialize MCP session #{server_id}: #{inspect(reason)}")
+        {:stop, {:transport_init_failed, reason}}
+    end
+  end
+
+  defp init_with_transport(server_id, server_config, transport_config) do
     transport_module = Transport.transport_module(transport_config.type)
 
     state = %__MODULE__{
@@ -188,6 +214,12 @@ defmodule Orchestrator.MCP.Session do
       pending_requests: %{}
     }
 
+    # Emit session start telemetry
+    emit_telemetry(:session_start, %{}, %{
+      server_id: server_id,
+      transport_type: transport_config.type
+    })
+
     # Start connection asynchronously
     send(self(), {:connect, transport_config})
 
@@ -198,8 +230,11 @@ defmodule Orchestrator.MCP.Session do
   def handle_call({:call_tool, tool_name, arguments}, from, state) do
     case ensure_ready(state) do
       :ok ->
+        start_time = System.monotonic_time(:millisecond)
         request = MCPAdapter.build_tool_call(tool_name, arguments)
-        send_request(state, request, from)
+        # Store start time for telemetry on response
+        request_with_meta = Map.put(request, :_meta, %{start_time: start_time, tool_name: tool_name, type: :tool_call})
+        send_request(state, request_with_meta, from)
 
       {:error, _} = err ->
         {:reply, err, state}
@@ -224,8 +259,10 @@ defmodule Orchestrator.MCP.Session do
   def handle_call({:read_resource, uri}, from, state) do
     case ensure_ready(state) do
       :ok ->
+        start_time = System.monotonic_time(:millisecond)
         request = MCPAdapter.build_resource_read(uri)
-        send_request(state, request, from)
+        request_with_meta = Map.put(request, :_meta, %{start_time: start_time, uri: uri, type: :resource_read})
+        send_request(state, request_with_meta, from)
 
       {:error, _} = err ->
         {:reply, err, state}
@@ -299,6 +336,17 @@ defmodule Orchestrator.MCP.Session do
     {:reply, info, state}
   end
 
+  def handle_call(:get_agent_card, _from, state) do
+    case ensure_ready(state) do
+      :ok ->
+        card = build_agent_card(state)
+        {:reply, {:ok, card}, state}
+
+      {:error, _} = err ->
+        {:reply, err, state}
+    end
+  end
+
   def handle_call(:close, _from, state) do
     new_state = do_close(state)
     {:reply, :ok, new_state}
@@ -342,16 +390,28 @@ defmodule Orchestrator.MCP.Session do
 
   def handle_info({:mcp_error, reason}, state) do
     Logger.error("MCP transport error: #{inspect(reason)}")
+    emit_telemetry(:transport_error, %{}, %{
+      server_id: state.server_id,
+      error: inspect(reason)
+    })
     {:noreply, %{state | session_state: :closed}}
   end
 
   def handle_info({:mcp_closed, reason}, state) do
     Logger.info("MCP connection closed: #{inspect(reason)}")
+    emit_telemetry(:session_stop, %{}, %{
+      server_id: state.server_id,
+      reason: inspect(reason)
+    })
     {:noreply, %{state | session_state: :closed}}
   end
 
   @impl true
-  def terminate(_reason, state) do
+  def terminate(reason, state) do
+    emit_telemetry(:session_stop, %{}, %{
+      server_id: state.server_id,
+      reason: inspect(reason)
+    })
     do_close(state)
   end
 
@@ -376,20 +436,24 @@ defmodule Orchestrator.MCP.Session do
   end
 
   defp send_request(state, request, from) do
+    # Extract metadata if present
+    {meta, request} = Map.pop(request, :_meta, %{})
     request_id = request["id"]
 
-    case state.transport_module.send(state.transport_state, request) do
+    case state.transport_module.send_message(state.transport_state, request) do
       {:ok, transport_state, response} ->
-        # Synchronous response
+        # Synchronous response - emit telemetry immediately
+        emit_request_telemetry(meta, state, :ok)
         result = extract_result(response)
         {:reply, result, %{state | transport_state: transport_state}}
 
       {:ok, transport_state} ->
-        # Async - will get response via message
-        pending = Map.put(state.pending_requests, request_id, from)
+        # Async - store metadata with pending request for telemetry on response
+        pending = Map.put(state.pending_requests, request_id, {from, meta})
         {:noreply, %{state | transport_state: transport_state, pending_requests: pending}}
 
-      {:error, _} = err ->
+      {:error, reason} = err ->
+        emit_request_telemetry(meta, state, {:error, reason})
         {:reply, err, state}
     end
   end
@@ -440,7 +504,13 @@ defmodule Orchestrator.MCP.Session do
         Logger.warning("Received response for unknown request: #{id}")
         {:noreply, state}
 
+      {{from, meta}, pending} ->
+        emit_request_telemetry(meta, state, :ok)
+        GenServer.reply(from, {:ok, result})
+        {:noreply, %{state | pending_requests: pending}}
+
       {from, pending} ->
+        # Legacy format without meta
         GenServer.reply(from, {:ok, result})
         {:noreply, %{state | pending_requests: pending}}
     end
@@ -452,7 +522,13 @@ defmodule Orchestrator.MCP.Session do
         Logger.warning("Received error for unknown request: #{id}")
         {:noreply, state}
 
+      {{from, meta}, pending} ->
+        emit_request_telemetry(meta, state, {:error, error})
+        GenServer.reply(from, {:error, error})
+        {:noreply, %{state | pending_requests: pending}}
+
       {from, pending} ->
+        # Legacy format without meta
         GenServer.reply(from, {:error, error})
         {:noreply, %{state | pending_requests: pending}}
     end
@@ -481,6 +557,11 @@ defmodule Orchestrator.MCP.Session do
 
   defp handle_notification("sampling/createMessage", params, state) do
     # Server requesting LLM sampling - forward to client handler
+    emit_telemetry(:sampling_request, %{}, %{
+      server_id: state.server_id,
+      direction: :incoming
+    })
+
     if state.client_handler do
       send(state.client_handler, {:mcp_sampling_request, params})
     else
@@ -499,13 +580,149 @@ defmodule Orchestrator.MCP.Session do
   defp extract_result(%{"error" => error}), do: {:error, error}
   defp extract_result(other), do: {:error, {:unexpected_response, other}}
 
+  # -------------------------------------------------------------------
+  # Agent Card Synthesis
+  # -------------------------------------------------------------------
+
+  defp build_agent_card(state) do
+    server_name = get_in(state.server_info, ["name"]) || state.server_id
+    server_version = get_in(state.server_info, ["version"]) || "1.0.0"
+
+    # Build skills from tools
+    skills =
+      (state.tools || [])
+      |> Enum.map(fn tool ->
+        %{
+          "id" => tool["name"],
+          "name" => tool["name"],
+          "description" => tool["description"] || "",
+          "tags" => ["mcp", "tool"],
+          "examples" => build_tool_examples(tool)
+        }
+      end)
+
+    # Build capabilities from MCP capabilities
+    capabilities = build_capabilities_map(state.capabilities)
+
+    %{
+      "name" => server_name,
+      "version" => server_version,
+      "protocol" => "mcp",
+      "protocolVersion" => "2024-11-05",
+      "description" => build_description(state),
+      "url" => nil,
+      "capabilities" => capabilities,
+      "defaultInputModes" => ["application/json"],
+      "defaultOutputModes" => ["application/json"],
+      "skills" => skills,
+      "metadata" => %{
+        "mcp" => %{
+          "server_info" => state.server_info,
+          "tools_count" => length(state.tools || []),
+          "resources_count" => length(state.resources || []),
+          "prompts_count" => length(state.prompts || []),
+          "resources" => build_resource_summary(state.resources),
+          "prompts" => build_prompt_summary(state.prompts)
+        }
+      }
+    }
+  end
+
+  defp build_description(state) do
+    tool_count = length(state.tools || [])
+    resource_count = length(state.resources || [])
+    prompt_count = length(state.prompts || [])
+
+    parts = []
+    parts = if tool_count > 0, do: parts ++ ["#{tool_count} tools"], else: parts
+    parts = if resource_count > 0, do: parts ++ ["#{resource_count} resources"], else: parts
+    parts = if prompt_count > 0, do: parts ++ ["#{prompt_count} prompts"], else: parts
+
+    server_name = get_in(state.server_info, ["name"]) || state.server_id
+
+    case parts do
+      [] -> "MCP server: #{server_name}"
+      _ -> "MCP server: #{server_name} with #{Enum.join(parts, ", ")}"
+    end
+  end
+
+  defp build_capabilities_map(nil), do: %{}
+
+  defp build_capabilities_map(caps) do
+    %{
+      "streaming" => false,
+      "pushNotifications" => false,
+      "stateTransitionHistory" => false,
+      "mcp" => %{
+        "tools" => caps.capabilities.tools || false,
+        "resources" => caps.capabilities.resources || false,
+        "prompts" => caps.capabilities.prompts || false,
+        "logging" => caps.capabilities.logging || false,
+        "sampling" => caps.client_requirements.sampling || false,
+        "roots" => caps.client_requirements.roots || false
+      }
+    }
+  end
+
+  defp build_tool_examples(%{"inputSchema" => schema}) when is_map(schema) do
+    # Generate example from JSON schema
+    case schema do
+      %{"properties" => props} when is_map(props) ->
+        example =
+          Enum.map(props, fn {key, prop} ->
+            value = generate_example_value(prop)
+            {key, value}
+          end)
+          |> Map.new()
+
+        [Jason.encode!(example)]
+
+      _ ->
+        []
+    end
+  end
+
+  defp build_tool_examples(_), do: []
+
+  defp generate_example_value(%{"type" => "string"}), do: "example"
+  defp generate_example_value(%{"type" => "number"}), do: 0
+  defp generate_example_value(%{"type" => "integer"}), do: 0
+  defp generate_example_value(%{"type" => "boolean"}), do: true
+  defp generate_example_value(%{"type" => "array"}), do: []
+  defp generate_example_value(%{"type" => "object"}), do: %{}
+  defp generate_example_value(_), do: nil
+
+  defp build_resource_summary(nil), do: []
+
+  defp build_resource_summary(resources) do
+    Enum.map(resources, fn r ->
+      %{
+        "uri" => r["uri"],
+        "name" => r["name"],
+        "mimeType" => r["mimeType"]
+      }
+    end)
+  end
+
+  defp build_prompt_summary(nil), do: []
+
+  defp build_prompt_summary(prompts) do
+    Enum.map(prompts, fn p ->
+      %{
+        "name" => p["name"],
+        "description" => p["description"],
+        "arguments" => p["arguments"]
+      }
+    end)
+  end
+
   defp do_close(state) do
     if state.transport_state do
       # Try to send shutdown
       shutdown = %{"jsonrpc" => "2.0", "method" => "shutdown"}
 
       try do
-        state.transport_module.send(state.transport_state, shutdown)
+        state.transport_module.send_message(state.transport_state, shutdown)
       catch
         _, _ -> :ok
       end
@@ -515,4 +732,40 @@ defmodule Orchestrator.MCP.Session do
 
     %{state | session_state: :closed, transport_state: nil}
   end
+
+  # -------------------------------------------------------------------
+  # Telemetry Helpers
+  # -------------------------------------------------------------------
+
+  defp emit_telemetry(event, measurements, metadata) do
+    :telemetry.execute(
+      @telemetry_prefix ++ [event],
+      Map.merge(%{timestamp: System.system_time(:millisecond)}, measurements),
+      metadata
+    )
+  end
+
+  defp emit_request_telemetry(%{type: :tool_call, start_time: start_time, tool_name: tool_name}, state, result) do
+    duration_ms = System.monotonic_time(:millisecond) - start_time
+    status = if match?(:ok, result), do: :ok, else: :error
+
+    emit_telemetry(:tool_call, %{duration_ms: duration_ms}, %{
+      server_id: state.server_id,
+      tool_name: tool_name,
+      status: status
+    })
+  end
+
+  defp emit_request_telemetry(%{type: :resource_read, start_time: start_time, uri: uri}, state, result) do
+    duration_ms = System.monotonic_time(:millisecond) - start_time
+    status = if match?(:ok, result), do: :ok, else: :error
+
+    emit_telemetry(:resource_read, %{duration_ms: duration_ms}, %{
+      server_id: state.server_id,
+      uri: uri,
+      status: status
+    })
+  end
+
+  defp emit_request_telemetry(_meta, _state, _result), do: :ok
 end

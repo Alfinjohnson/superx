@@ -156,9 +156,11 @@ defmodule Orchestrator.MCP.ClientHandler do
 
   defp handle_sampling_request(request_id, params, state) do
     Logger.debug("MCP sampling request: #{inspect(params)}")
+    start_time = System.monotonic_time(:millisecond)
 
     case state.sampling_config do
       nil ->
+        emit_sampling_telemetry(start_time, nil, :error)
         send_error_response(state.session_pid, request_id, -32601, "Sampling not configured")
 
       config ->
@@ -168,9 +170,11 @@ defmodule Orchestrator.MCP.ClientHandler do
 
           case result do
             {:ok, response} ->
+              emit_sampling_telemetry(start_time, config[:provider], :ok)
               send_success_response(state.session_pid, request_id, response)
 
             {:error, reason} ->
+              emit_sampling_telemetry(start_time, config[:provider], :error)
               send_error_response(state.session_pid, request_id, -32000, inspect(reason))
           end
         end)
@@ -441,5 +445,19 @@ defmodule Orchestrator.MCP.ClientHandler do
         "name" => Path.basename(cwd)
       }
     ]
+  end
+
+  # -------------------------------------------------------------------
+  # Telemetry
+  # -------------------------------------------------------------------
+
+  defp emit_sampling_telemetry(start_time, provider, status) do
+    duration_ms = System.monotonic_time(:millisecond) - start_time
+
+    :telemetry.execute(
+      [:orchestrator, :mcp, :sampling_complete],
+      %{duration_ms: duration_ms, timestamp: System.system_time(:millisecond)},
+      %{provider: provider, status: status}
+    )
   end
 end

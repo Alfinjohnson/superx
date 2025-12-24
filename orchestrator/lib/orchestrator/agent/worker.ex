@@ -241,9 +241,28 @@ defmodule Orchestrator.Agent.Worker do
             emit_telemetry(:call_stop, state, env, %{status: 200})
             success
 
+          {:error, {:process_exited, _code} = reason} ->
+            # Process crash - should trigger circuit breaker
+            Logger.warning("MCP process crashed", agent_id: state.agent_id, error: inspect(reason))
+            emit_telemetry(:call_error, state, env, %{error: reason, breaker_trigger: true})
+            {:error, {:mcp_error, reason}}
+
+          {:error, {:transport_error, _} = reason} ->
+            # Transport failure - should trigger circuit breaker
+            Logger.warning("MCP transport error", agent_id: state.agent_id, error: inspect(reason))
+            emit_telemetry(:call_error, state, env, %{error: reason, breaker_trigger: true})
+            {:error, {:mcp_error, reason}}
+
+          {:error, %{"code" => code} = error} when code in [-32600, -32601, -32602, -32603] ->
+            # JSON-RPC errors (invalid request, method not found, etc.) - don't trigger breaker
+            Logger.warning("MCP JSON-RPC error", agent_id: state.agent_id, error: inspect(error))
+            emit_telemetry(:call_error, state, env, %{error: error, breaker_trigger: false})
+            {:error, {:mcp_rpc_error, error}}
+
           {:error, reason} ->
+            # Other errors - trigger circuit breaker
             Logger.warning("MCP call failed", agent_id: state.agent_id, error: inspect(reason))
-            emit_telemetry(:call_error, state, env, %{error: reason})
+            emit_telemetry(:call_error, state, env, %{error: reason, breaker_trigger: true})
             {:error, {:mcp_error, reason}}
         end
 
@@ -390,6 +409,8 @@ defmodule Orchestrator.Agent.Worker do
   defp maybe_transition_breaker(state), do: state
 
   defp update_breaker_on_result(state, {:ok, _}), do: record_success(state)
+  # MCP RPC errors (method not found, invalid params) shouldn't trigger breaker
+  defp update_breaker_on_result(state, {:error, {:mcp_rpc_error, _}}), do: state
   defp update_breaker_on_result(state, {:error, _}), do: record_failure(state)
 
   defp record_success(%{breaker_state: :half_open} = state) do

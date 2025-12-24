@@ -277,6 +277,17 @@ defmodule Orchestrator.Agent.Loader do
           "headers" => expand_env_vars(t["headers"] || %{})
         }
 
+      # OCI package format
+      %{"package" => %{"registryType" => "oci"} = package} = t ->
+        %{
+          "type" => "stdio",
+          "package" => %{
+            "name" => expand_env_var(package["name"]),
+            "registryType" => "oci"
+          },
+          "env" => expand_env_vars(t["env"] || %{})
+        }
+
       _ ->
         Logger.warning("Unable to determine transport config: #{inspect(config)}")
         %{"type" => "unknown"}

@@ -320,6 +320,7 @@ defmodule Orchestrator.MCP.Transport.STDIO do
           do_wait_for_response(new_state, request_id, deadline)
 
         {port, {:exit_status, code}} when port == state.port ->
+          emit_process_crash(state, code)
           {:error, {:process_exited, code}}
       after
         min(remaining, 1000) ->
@@ -371,4 +372,17 @@ defmodule Orchestrator.MCP.Transport.STDIO do
 
   defp ensure_id(%{"id" => _} = message), do: message
   defp ensure_id(message), do: Map.put(message, "id", Utils.new_id())
+
+  defp emit_process_crash(state, exit_code) do
+    :telemetry.execute(
+      [:orchestrator, :mcp, :process_crash],
+      %{timestamp: System.system_time(:millisecond)},
+      %{
+        command: state.command,
+        args: state.args,
+        exit_code: exit_code,
+        os_pid: state.os_pid
+      }
+    )
+  end
 end
