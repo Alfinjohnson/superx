@@ -39,7 +39,7 @@ defmodule Orchestrator.StressTest do
           Task.async(fn ->
             task_payload =
               Factory.build(:task_payload)
-              |> Map.put("id", "stress-task-#{i}-#{unique_id()}")
+              |> Map.put("id", "stress-task-#{i}-#{local_unique_id()}")
 
             start_time = System.monotonic_time(:microsecond)
             :ok = TaskStore.put(task_payload)
@@ -80,7 +80,7 @@ defmodule Orchestrator.StressTest do
           Enum.map(1..@rapid_fire_count, fn i ->
             task_payload =
               Factory.build(:task_payload)
-              |> Map.put("id", "rapid-#{i}-#{unique_id()}")
+              |> Map.put("id", "rapid-#{i}-#{local_unique_id()}")
 
             :ok = TaskStore.put(task_payload)
             task_payload["id"]
@@ -193,7 +193,7 @@ defmodule Orchestrator.StressTest do
           Task.async(fn ->
             agent =
               Factory.build(:agent_map)
-              |> Map.put("id", "stress-agent-#{i}-#{unique_id()}")
+              |> Map.put("id", "stress-agent-#{i}-#{local_unique_id()}")
 
             start_time = System.monotonic_time(:microsecond)
             AgentStore.upsert(agent)
@@ -372,7 +372,7 @@ defmodule Orchestrator.StressTest do
     @tag timeout: 60_000
     test "handles thundering herd on single task" do
       # Create a single task
-      task_id = "thundering-herd-#{unique_id()}"
+      task_id = "thundering-herd-#{local_unique_id()}"
       task = Factory.build(:task_payload) |> Map.put("id", task_id)
       TaskStore.put(task)
 
@@ -416,7 +416,7 @@ defmodule Orchestrator.StressTest do
 
     @tag timeout: 60_000
     test "handles concurrent subscriptions" do
-      task_id = "sub-stress-#{unique_id()}"
+      task_id = "sub-stress-#{local_unique_id()}"
       task = Factory.build(:task_payload) |> Map.put("id", task_id)
       TaskStore.put(task)
 
@@ -457,10 +457,364 @@ defmodule Orchestrator.StressTest do
   end
 
   # -------------------------------------------------------------------
+  # Streaming Stress Tests
+  # -------------------------------------------------------------------
+
+  describe "Streaming stress" do
+    @tag timeout: 120_000
+    test "handles 50+ concurrent SSE connections to tasks.subscribe" do
+      # Create tasks for streaming
+      task_ids =
+        for i <- 1..50 do
+          task = %{
+            "id" => "stream-stress-#{i}-#{local_unique_id()}",
+            "agentId" => "test-agent",
+            "status" => %{"state" => "working"},
+            "artifacts" => []
+          }
+
+          TaskStore.put(task)
+          task["id"]
+        end
+
+      parent = self()
+      start_time = System.monotonic_time(:millisecond)
+
+      # Start 50 concurrent subscribers
+      subscriber_tasks =
+        Enum.map(task_ids, fn task_id ->
+          Task.async(fn ->
+            # Subscribe to task
+            _task = TaskStore.subscribe(task_id)
+
+            send(parent, {:subscribed, task_id})
+
+            # Wait for updates
+            updates_received =
+              receive do
+                {:task_update, _task} ->
+                  1
+              after
+                10_000 -> 0
+              end
+
+            updates_received
+          end)
+        end)
+
+      # Wait for all subscriptions to establish
+      for _i <- 1..50 do
+        assert_receive {:subscribed, _task_id}, 5_000
+      end
+
+      subscription_time = System.monotonic_time(:millisecond) - start_time
+
+      # Broadcast updates to all tasks
+      update_start = System.monotonic_time(:millisecond)
+
+      for task_id <- task_ids do
+        TaskStore.apply_status_update(%{
+          "taskId" => task_id,
+          "status" => %{"state" => "working", "message" => "Progress"}
+        })
+      end
+
+      broadcast_time = System.monotonic_time(:millisecond) - update_start
+
+      # Wait for all subscribers to receive updates
+      results = Task.await_many(subscriber_tasks, 15_000)
+      total_updates = Enum.sum(results)
+
+      total_time = System.monotonic_time(:millisecond) - start_time
+
+      IO.puts("\n📊 Concurrent SSE Streaming Stats:")
+      IO.puts("   Concurrent connections: 50")
+      IO.puts("   Subscription time: #{subscription_time}ms")
+      IO.puts("   Broadcast time: #{broadcast_time}ms")
+      IO.puts("   Total time: #{total_time}ms")
+      IO.puts("   Updates received: #{total_updates}/50")
+      IO.puts("   Success rate: #{Float.round(total_updates / 50 * 100, 1)}%")
+
+      assert total_updates >= 45, "Expected at least 45 updates, got #{total_updates}"
+    end
+
+    @tag timeout: 90_000
+    test "handles long-running streams (60s+ sustained connections)" do
+      # Create a task for long-running stream
+      task_id = "long-stream-#{local_unique_id()}"
+
+      task = %{
+        "id" => task_id,
+        "agentId" => "test-agent",
+        "status" => %{"state" => "working"},
+        "artifacts" => []
+      }
+
+      TaskStore.put(task)
+
+      parent = self()
+      start_time = System.monotonic_time(:second)
+
+      # Start subscriber that will run for 60+ seconds
+      stream_task =
+        Task.async(fn ->
+          TaskStore.subscribe(task_id)
+          send(parent, :stream_started)
+
+          # Collect updates for 60 seconds
+          collect_updates_for_duration(60_000, [])
+        end)
+
+      assert_receive :stream_started, 2_000
+
+      # Send updates every second for 60 seconds
+      update_task =
+        Task.async(fn ->
+          for i <- 1..60 do
+            TaskStore.apply_status_update(%{
+              "taskId" => task_id,
+              "status" => %{"state" => "working", "message" => "Second #{i}"}
+            })
+
+            Process.sleep(1_000)
+          end
+
+          # Send terminal state
+          TaskStore.apply_status_update(%{
+            "taskId" => task_id,
+            "status" => %{"state" => "completed"}
+          })
+        end)
+
+      # Wait for both tasks
+      updates = Task.await(stream_task, 70_000)
+      Task.await(update_task, 70_000)
+
+      duration = System.monotonic_time(:second) - start_time
+
+      IO.puts("\n📊 Long-Running Stream Stats:")
+      IO.puts("   Duration: #{duration}s")
+      IO.puts("   Updates received: #{length(updates)}")
+      IO.puts("   Expected updates: ~61")
+      IO.puts("   Update rate: #{Float.round(length(updates) / duration, 2)}/s")
+
+      # Should receive most updates (allowing for some timing variance)
+      assert length(updates) >= 55, "Expected at least 55 updates, got #{length(updates)}"
+    end
+
+    @tag timeout: 60_000
+    test "handles high-frequency SSE event flooding" do
+      task_id = "flood-test-#{local_unique_id()}"
+
+      task = %{
+        "id" => task_id,
+        "agentId" => "test-agent",
+        "status" => %{"state" => "working"},
+        "artifacts" => []
+      }
+
+      TaskStore.put(task)
+
+      parent = self()
+
+      # Start subscriber
+      subscriber =
+        Task.async(fn ->
+          TaskStore.subscribe(task_id)
+          send(parent, :subscribed)
+
+          # Collect events as fast as possible
+          collect_updates_with_timeout(5_000, [])
+        end)
+
+      assert_receive :subscribed, 1_000
+
+      # Flood with 500 rapid updates
+      flood_start = System.monotonic_time(:millisecond)
+
+      for i <- 1..500 do
+        TaskStore.apply_status_update(%{
+          "taskId" => task_id,
+          "status" => %{"state" => "working", "message" => "Event #{i}"}
+        })
+      end
+
+      flood_time = System.monotonic_time(:millisecond) - flood_start
+
+      # Send terminal state
+      Process.sleep(100)
+
+      TaskStore.apply_status_update(%{
+        "taskId" => task_id,
+        "status" => %{"state" => "completed"}
+      })
+
+      # Collect results
+      updates = Task.await(subscriber, 10_000)
+
+      IO.puts("\n📊 High-Frequency Event Flood Stats:")
+      IO.puts("   Events sent: 500")
+      IO.puts("   Events received: #{length(updates)}")
+      IO.puts("   Flood duration: #{flood_time}ms")
+      IO.puts("   Send rate: #{Float.round(500 / flood_time * 1000, 0)} events/s")
+      IO.puts("   Delivery rate: #{Float.round(length(updates) / 500 * 100, 1)}%")
+
+      # System should handle at least 80% of events under flood
+      assert length(updates) >= 400, "Expected at least 400 updates, got #{length(updates)}"
+    end
+
+    @tag timeout: 30_000
+    test "handles client disconnect mid-stream gracefully" do
+      task_id = "disconnect-test-#{local_unique_id()}"
+
+      task = %{
+        "id" => task_id,
+        "agentId" => "test-agent",
+        "status" => %{"state" => "working"},
+        "artifacts" => []
+      }
+
+      TaskStore.put(task)
+
+      parent = self()
+
+      # Start subscriber that will disconnect after receiving 5 updates
+      subscriber =
+        Task.async(fn ->
+          TaskStore.subscribe(task_id)
+          send(parent, :subscribed)
+
+          # Receive 5 updates then exit (simulating disconnect)
+          updates = collect_n_updates(5, [])
+
+          send(parent, {:received, length(updates)})
+          updates
+        end)
+
+      assert_receive :subscribed, 1_000
+
+      # Send 20 updates
+      for i <- 1..20 do
+        TaskStore.apply_status_update(%{
+          "taskId" => task_id,
+          "status" => %{"state" => "working", "message" => "Update #{i}"}
+        })
+
+        Process.sleep(50)
+      end
+
+      # Subscriber should disconnect after 5
+      assert_receive {:received, 5}, 5_000
+
+      # Continue sending updates (should not crash)
+      for i <- 21..30 do
+        TaskStore.apply_status_update(%{
+          "taskId" => task_id,
+          "status" => %{"state" => "working", "message" => "Update #{i}"}
+        })
+
+        Process.sleep(50)
+      end
+
+      # Cleanup
+      updates = Task.await(subscriber, 1_000)
+      assert length(updates) == 5
+
+      IO.puts("\n✅ Client disconnect handled gracefully")
+    end
+
+    @tag timeout: 30_000
+    test "handles stream initialization timeout stress" do
+      # Create 20 tasks but never send updates (simulate slow agents)
+      task_ids =
+        for i <- 1..20 do
+          task = %{
+            "id" => "timeout-stress-#{i}-#{local_unique_id()}",
+            "agentId" => "slow-agent",
+            "status" => %{"state" => "working"},
+            "artifacts" => []
+          }
+
+          TaskStore.put(task)
+          task["id"]
+        end
+
+      start_time = System.monotonic_time(:millisecond)
+
+      # Try to subscribe to all (with 2s timeout)
+      results =
+        Enum.map(task_ids, fn task_id ->
+          Task.async(fn ->
+            TaskStore.subscribe(task_id)
+
+            # Wait for update with timeout
+            receive do
+              {:task_update, _} -> :received
+            after
+              2_000 -> :timeout
+            end
+          end)
+        end)
+        |> Task.await_many(5_000)
+
+      total_time = System.monotonic_time(:millisecond) - start_time
+
+      timeouts = Enum.count(results, &(&1 == :timeout))
+
+      IO.puts("\n📊 Stream Timeout Stress Stats:")
+      IO.puts("   Subscriptions: 20")
+      IO.puts("   Timeouts: #{timeouts}")
+      IO.puts("   Total time: #{total_time}ms")
+
+      # All should timeout gracefully
+      assert timeouts == 20
+    end
+  end
+
+  # -------------------------------------------------------------------
+  # Streaming Helper Functions
+  # -------------------------------------------------------------------
+
+  defp collect_updates_for_duration(duration_ms, acc) do
+    receive do
+      {:task_update, task} ->
+        collect_updates_for_duration(duration_ms, [task | acc])
+    after
+      duration_ms -> Enum.reverse(acc)
+    end
+  end
+
+  defp collect_updates_with_timeout(timeout_ms, acc) do
+    receive do
+      {:task_update, task} ->
+        state = get_in(task, ["status", "state"])
+
+        if state == "completed" do
+          Enum.reverse([task | acc])
+        else
+          collect_updates_with_timeout(timeout_ms, [task | acc])
+        end
+    after
+      timeout_ms -> Enum.reverse(acc)
+    end
+  end
+
+  defp collect_n_updates(0, acc), do: Enum.reverse(acc)
+
+  defp collect_n_updates(n, acc) do
+    receive do
+      {:task_update, task} ->
+        collect_n_updates(n - 1, [task | acc])
+    after
+      5_000 -> Enum.reverse(acc)
+    end
+  end
+
+  # -------------------------------------------------------------------
   # Helper Functions
   # -------------------------------------------------------------------
 
-  defp unique_id do
+  defp local_unique_id do
     :crypto.strong_rand_bytes(4) |> Base.encode16(case: :lower)
   end
 

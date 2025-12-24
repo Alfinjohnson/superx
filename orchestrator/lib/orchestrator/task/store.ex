@@ -4,7 +4,7 @@ defmodule Orchestrator.Task.Store do
 
   Delegates to the appropriate adapter based on persistence mode:
   - `:postgres` → PostgreSQL with Ecto
-  - `:memory` → ETS-backed in-memory store
+  - `:memory` → Distributed in-memory store (OTP replicated)
 
   ## Task Structure
 

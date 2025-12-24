@@ -72,21 +72,33 @@ defmodule Orchestrator.Infra.SSEClient do
     }
 
     case Finch.stream(req, Orchestrator.Finch, initial_state, &handle_chunk/2) do
-      {:ok, _} -> :ok
-      {:error, reason} -> Logger.warning("SSE client failed", reason: inspect(reason))
+      {:ok, _} ->
+        :ok
+
+      {:error, %Mint.TransportError{reason: reason}, state} ->
+        Logger.warning("SSE client transport error", reason: inspect(reason), rpc_id: rpc_id)
+        send(state.reply_to, {:stream_error, state.rpc_id, {:transport_error, reason}})
+
+      {:error, reason, state} ->
+        Logger.warning("SSE client failed with state", reason: inspect(reason), rpc_id: rpc_id)
+        send(state.reply_to, {:stream_error, state.rpc_id, reason})
+
+      {:error, reason} ->
+        Logger.warning("SSE client failed", reason: inspect(reason), rpc_id: rpc_id)
+        send(reply_to, {:stream_error, rpc_id, reason})
     end
   end
 
   defp handle_chunk({:status, status}, state) do
     if status in 200..299 do
-      {:cont, state}
+      state
     else
       send(state.reply_to, {:stream_error, state.rpc_id, status})
-      {:halt, state}
+      state
     end
   end
 
-  defp handle_chunk({:headers, _headers}, state), do: {:cont, state}
+  defp handle_chunk({:headers, _headers}, state), do: state
 
   defp handle_chunk({:data, chunk}, state) do
     data = state.buffer <> IO.iodata_to_binary(chunk)
@@ -110,11 +122,11 @@ defmodule Orchestrator.Infra.SSEClient do
         end
       end)
 
-    {:cont, %{new_state | buffer: rest}}
+    %{new_state | buffer: rest}
   end
 
   defp handle_chunk(:done, state) do
-    {:halt, state}
+    state
   end
 
   defp split_events(data) do

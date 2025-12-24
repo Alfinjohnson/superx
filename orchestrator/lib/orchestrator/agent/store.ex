@@ -2,14 +2,11 @@ defmodule Orchestrator.Agent.Store do
   @moduledoc """
   Agent configuration store.
 
-  Delegates to the appropriate adapter based on persistence mode:
-  - `:postgres` → PostgreSQL with Ecto
-  - `:memory` → ETS-backed in-memory store
+  Uses distributed in-memory storage via ETS with optional Horde-based distribution.
 
-  Agents are bootstrapped from multiple sources on startup (in postgres mode):
-  1. Database (persisted agents)
-  2. YAML file (`agents.yml`)
-  3. Application config (`:orchestrator, :agents`)
+  Agents can be bootstrapped from multiple sources on startup:
+  1. YAML file (`agents.yml`)
+  2. Application config (`:orchestrator, :agents`)
 
   ## Public API
 
@@ -17,7 +14,6 @@ defmodule Orchestrator.Agent.Store do
   - `list/0` - List all agents
   - `upsert/1` - Create or update agent
   - `delete/1` - Remove agent
-  - `refresh_card/1` - Fetch and cache agent card
 
   ## Agent Structure
 
@@ -70,13 +66,11 @@ defmodule Orchestrator.Agent.Store do
   @spec delete(String.t()) :: :ok
   def delete(agent_id), do: adapter().delete(agent_id)
 
-  @doc "Refresh agent card from remote URL."
+  @doc "Refresh agent card from remote URL (not implemented in memory mode)."
   @spec refresh_card(String.t()) :: {:ok, map()} | {:error, term()}
-  def refresh_card(agent_id) do
-    case Persistence.mode() do
-      :postgres -> Orchestrator.Agent.Store.Postgres.refresh_card(agent_id)
-      :memory -> {:error, :not_implemented}
-    end
+  def refresh_card(_agent_id) do
+    # Card refresh requires external fetch - could be implemented later
+    {:error, :not_implemented}
   end
 
   @doc """

@@ -1,15 +1,10 @@
 defmodule Orchestrator.Agent.StoreTest do
   @moduledoc """
-  Tests for the Agent.Store module.
-  These tests require PostgreSQL and are skipped in memory mode.
+  Tests for the Agent.Store module (memory adapter).
   """
-  use Orchestrator.DataCase
-
-  # This test module uses Repo directly, skip in memory mode
-  @moduletag :postgres_only
+  use ExUnit.Case, async: false
 
   alias Orchestrator.Agent.Store, as: AgentStore
-  alias Orchestrator.Schema.Agent, as: AgentSchema
 
   setup do
     # Clear any existing agents from config for test isolation
@@ -18,8 +13,6 @@ defmodule Orchestrator.Agent.StoreTest do
 
     Application.put_env(:orchestrator, :agents_file, nil)
     Application.put_env(:orchestrator, :agents, %{})
-
-    Orchestrator.Repo.delete_all(AgentSchema)
 
     on_exit(fn ->
       Application.put_env(:orchestrator, :agents, prev_agents)

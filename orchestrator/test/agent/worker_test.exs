@@ -9,7 +9,6 @@ defmodule Orchestrator.Agent.WorkerTest do
   use Orchestrator.DataCase, async: false
 
   alias Orchestrator.Factory
-  alias Orchestrator.Protocol.Envelope
   alias Orchestrator.TelemetryHelper
 
   # Circuit breaker defaults (from Worker module)

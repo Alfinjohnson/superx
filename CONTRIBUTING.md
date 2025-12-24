@@ -43,11 +43,11 @@ mix test
 ### Running Tests
 
 ```bash
-# Run tests in memory mode (faster, no DB required)
+# Run tests in memory mode (default, no DB required)
 mix test
 
-# Run tests in PostgreSQL mode (full test suite)
-SUPERX_PERSISTENCE=postgres mix test
+# Include PostgreSQL-only tests (requires DB)
+mix test --include postgres_only
 
 # Run with coverage
 mix coveralls

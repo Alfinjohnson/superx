@@ -21,14 +21,16 @@ SuperX is an **experimental Agentic Gateway Orchestrator** that helps AI agents 
 | Feature | Description |
 |---------|-------------|
 | **A2A Protocol Support** | Full support for Google's Agent-to-Agent protocol (more protocols coming soon) |
+| **Hybrid Task Management** | OTP-distributed in-memory tasks; optional Postgres archival (future) |
 | **Intelligent Routing** | Route messages to agents based on skills, availability, and load |
-| **Task Management** | Create, track, and manage tasks with full state persistence |
+| **Task Management** | Create, track, and manage tasks (optional persistence) |
 | **Streaming** | Real-time message streaming via Server-Sent Events (SSE) |
+| **Per-Request Webhooks** | Pass webhook URLs in requests for ephemeral notifications |
 | **Push Notifications** | Webhook-based notifications with HMAC, JWT, or token auth |
 | **Agent Registry** | Dynamic agent registration and discovery |
 | **Circuit Breaker** | Automatic failure detection with configurable thresholds |
 | **Backpressure** | Per-agent concurrency limits prevent overload |
-| **Horizontal Scaling** | PostgreSQL-backed shared state for multi-node deployments |
+| **Horizontal Scaling** | OTP-distributed in-memory or PostgreSQL-backed for multi-node deployments |
 | **Clustering** | Erlang node clustering via gossip, DNS, or Kubernetes |
 
 ## Quick Start
@@ -58,7 +60,7 @@ mix deps.get
 mix compile
 
 # Run with in-memory storage (no database required)
-$env:SUPERX_PERSISTENCE="memory"; mix run --no-halt
+mix run --no-halt
 ```
 
 ### Configure Agents
@@ -102,6 +104,39 @@ environment:
 ```
 
 See [samples/agents.yml](samples/agents.yml) for a complete example.
+
+### Per-Request Webhooks
+
+Pass webhook URLs directly in requests for ephemeral notifications without pre-configuration:
+
+```bash
+curl -X POST http://localhost:4000/rpc \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc":"2.0",
+    "id":1,
+    "method":"message/send",
+    "params":{
+      "agentId":"my_agent",
+      "message":{"role":"user","parts":[{"text":"Hello"}]},
+      "metadata":{
+        "webhook":{
+          "url":"https://myapp.com/webhook",
+          "hmacSecret":"secret123",
+          "token":"bearer-token"
+        }
+      }
+    }
+  }'
+```
+
+**Webhook Configuration:**
+- `url` (required): Endpoint to receive notifications
+- `hmacSecret` (optional): Secret for HMAC-SHA256 signing
+- `token` (optional): Bearer token for authentication
+- `jwtClaims` (optional): Custom JWT claims
+
+Per-request webhooks take precedence over stored webhook configurations.
 
 ### Verify Installation
 
@@ -165,13 +200,20 @@ curl -X POST http://localhost:4000/rpc \
 
 ### Persistence Modes
 
-| Mode | Use Case | Data Durability |
-|------|----------|-----------------|
-| **PostgreSQL** (default) | Production, multi-node | Persistent |
-| **Memory** | Development, testing, edge | Ephemeral |
+| Mode | Use Case | Data Durability | Task Storage |
+|------|----------|-----------------|--------------|
+| **Hybrid** (default) | Most deployments, edge, multi-node | In-memory (OTP-managed) | Tasks stored and streamed; optional archival (future) |
+| **PostgreSQL** | Audit, compliance, long-term storage | Persistent (shared DB) | Full task history |
 
-### Docker Compose Services
+**Storage Configuration:**
 
+Hybrid mode is the default. Tasks are always available via tasks.get/subscribe with OTP-managed in-memory storage. No configuration needed - just run the server.
+
+**PostgreSQL (optional - future archival):**
+
+Set `DATABASE_URL` or `DB_HOST` environment variables to enable PostgreSQL for task archival.
+
+### Docker
 ```bash
 # Production mode with PostgreSQL
 docker compose up orchestrator
@@ -179,8 +221,7 @@ docker compose up orchestrator
 # Development mode with hot reload
 docker compose up orchestrator-dev
 
-# Stateless mode (in-memory, single node)
-docker compose up orchestrator-stateless
+
 ```
 
 ### Environment Configuration
@@ -190,8 +231,7 @@ Key environment variables (see [Configuration Guide](orchestrator/docs/configura
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | 4000 | HTTP server port |
-| `SUPERX_PERSISTENCE` | postgres | Storage mode: `postgres` or `memory` |
-| `DATABASE_URL` | — | PostgreSQL connection string |
+| `DATABASE_URL` | — | PostgreSQL connection string (optional) |
 | `AGENTS_FILE` | — | Path to agents YAML configuration |
 | `CLUSTER_STRATEGY` | — | Clustering: `gossip`, `dns`, `kubernetes` |
 

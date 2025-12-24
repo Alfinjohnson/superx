@@ -25,23 +25,11 @@ defmodule Orchestrator.Router do
   plug(:dispatch)
 
   get "/health" do
-    db_status =
-      if Orchestrator.Persistence.memory?() do
-        "n/a"
-      else
-        case Orchestrator.Repo.query("SELECT 1") do
-          {:ok, _} -> "ok"
-          {:error, _} -> "error"
-        end
-      end
-
     cluster = Cluster.status()
-    status = if db_status in ["ok", "n/a"], do: "ok", else: "degraded"
 
     resp = %{
-      status: status,
-      mode: if(Orchestrator.Persistence.memory?(), do: "memory", else: "postgres"),
-      db: db_status,
+      status: "ok",
+      mode: "memory",
       node: cluster.node,
       cluster_size: cluster.node_count,
       local_workers: cluster.local_workers
@@ -108,7 +96,7 @@ defmodule Orchestrator.Router do
          {:ok, _agent} <- fetch_agent(agent_id),
          env = build_envelope("send", params, id, agent_id),
          {:ok, forwarded} <- AgentWorker.call(agent_id, env) do
-      maybe_store_task(forwarded)
+      maybe_store_task(forwarded, env.webhook)
 
       send_resp(
         conn,
@@ -155,7 +143,7 @@ defmodule Orchestrator.Router do
          {:ok, _streaming} <- AgentWorker.stream(agent_id, env, self()) do
       receive do
         {:stream_init, ^id, result} ->
-          maybe_store_task(result)
+          maybe_store_task(result, env.webhook)
 
           send_resp(
             conn,
@@ -231,23 +219,9 @@ defmodule Orchestrator.Router do
     send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => true}))
   end
 
-  defp handle_rpc(conn, id, "agents.refreshCard", %{"id" => agent_id}) do
-    case AgentStore.refresh_card(agent_id) do
-      {:ok, agent} ->
-        send_resp(conn, 200, Jason.encode!(%{"jsonrpc" => "2.0", "id" => id, "result" => agent}))
-
-      {:error, :not_found} ->
-        send_error(conn, id, -32010, "Agent not found")
-
-      {:error, :invalid_url} ->
-        send_error(conn, id, -32602, "Invalid agent url for card fetch")
-
-      {:error, {:http_status, status}} ->
-        send_error(conn, id, -32099, "Agent card fetch failed status=#{status}")
-
-      {:error, _} ->
-        send_error(conn, id, -32099, "Agent card fetch failed")
-    end
+  defp handle_rpc(conn, id, "agents.refreshCard", %{"id" => _agent_id}) do
+    # Card refresh is not implemented in memory-only mode
+    send_error(conn, id, -32601, "agents.refreshCard not implemented in memory-only mode")
   end
 
   defp handle_rpc(conn, id, "agents.health", %{"id" => agent_id}) do
@@ -352,6 +326,9 @@ defmodule Orchestrator.Router do
   end
 
   defp build_envelope(method, params, rpc_id, agent_id) do
+    # Extract per-request webhook from metadata if present
+    webhook = get_in(params, ["metadata", "webhook"])
+
     Envelope.new(%{
       method: method,
       task_id: Map.get(params, "taskId"),
@@ -359,19 +336,27 @@ defmodule Orchestrator.Router do
       message: Map.get(params, "message"),
       payload: params,
       agent_id: agent_id,
-      rpc_id: rpc_id
+      rpc_id: rpc_id,
+      webhook: webhook
     })
   end
 
-  defp maybe_store_task(%{"id" => _} = task) do
+  defp maybe_store_task(%{"id" => task_id} = task, per_request_webhook) do
     case TaskStore.put(task) do
       :ok -> :ok
       {:error, :terminal} -> Logger.info("task already terminal; skipped store")
       {:error, _} -> Logger.warning("failed to store task")
     end
+
+    # Also deliver per-request webhook if provided (in addition to stored configs)
+    if per_request_webhook do
+      PushConfig.deliver_event(task_id, %{"task" => task}, per_request_webhook)
+    end
+
+    :ok
   end
 
-  defp maybe_store_task(_), do: :ok
+  defp maybe_store_task(_, _), do: :ok
 
   defp request_id(conn, _opts) do
     rid = Utils.new_id()

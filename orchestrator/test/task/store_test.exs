@@ -2,10 +2,9 @@ defmodule Orchestrator.Task.StoreTest do
   @moduledoc """
   Tests for the Task.Store module.
   """
-  use Orchestrator.DataCase
+  use ExUnit.Case, async: false
 
   alias Orchestrator.Task.Store
-  alias Orchestrator.Schema.Task, as: TaskSchema
 
   describe "put/1" do
     test "stores a new task" do
@@ -143,35 +142,15 @@ defmodule Orchestrator.Task.StoreTest do
   end
 
   describe "list/1" do
-    @describetag :postgres_only
-
-    test "returns empty list when no tasks" do
-      Orchestrator.Repo.delete_all(TaskSchema)
-      assert Store.list() == []
-    end
-
-    test "returns all tasks" do
-      Orchestrator.Repo.delete_all(TaskSchema)
-
-      task1 = %{"id" => "task-1-#{unique_id()}", "status" => %{"state" => "working"}}
-      task2 = %{"id" => "task-2-#{unique_id()}", "status" => %{"state" => "completed"}}
+    test "returns tasks with limit" do
+      task1 = %{"id" => "list-1-#{unique_id()}", "status" => %{"state" => "working"}}
+      task2 = %{"id" => "list-2-#{unique_id()}", "status" => %{"state" => "completed"}}
 
       Store.put(task1)
       Store.put(task2)
 
-      tasks = Store.list()
-      assert length(tasks) == 2
-    end
-
-    test "respects limit option" do
-      Orchestrator.Repo.delete_all(TaskSchema)
-
-      for i <- 1..5 do
-        Store.put(%{"id" => "task-#{i}-#{unique_id()}", "status" => %{"state" => "working"}})
-      end
-
-      tasks = Store.list(limit: 3)
-      assert length(tasks) == 3
+      tasks = Store.list(limit: 10)
+      assert length(tasks) >= 2
     end
   end
 

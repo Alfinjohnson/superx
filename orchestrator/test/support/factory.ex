@@ -3,11 +3,8 @@ defmodule Orchestrator.Factory do
   Factory functions for creating test data.
   """
 
-  alias Orchestrator.Repo
-  alias Orchestrator.Schema.Task, as: TaskSchema
-
   # -------------------------------------------------------------------
-  # Task Records (for database)
+  # Task Payloads (maps for A2A responses)
   # -------------------------------------------------------------------
 
   # Specific 2-arity builds must come before the generic catch-all
@@ -15,47 +12,11 @@ defmodule Orchestrator.Factory do
     "data: #{Jason.encode!(%{"jsonrpc" => "2.0", "result" => result})}\n\n"
   end
 
-  def build(factory_name, attrs) do
+  def build(factory_name, attrs) when is_map(attrs) do
     factory_name
     |> build()
-    |> struct!(attrs)
+    |> Map.merge(attrs)
   end
-
-  def build(:task_schema) do
-    task_id = "task-#{unique_id()}"
-
-    %TaskSchema{
-      id: task_id,
-      payload: %{
-        "id" => task_id,
-        "contextId" => "ctx-#{unique_id()}",
-        "status" => %{"state" => "submitted"},
-        "artifacts" => [],
-        "history" => [],
-        "metadata" => %{}
-      }
-    }
-  end
-
-  def build(:completed_task_schema) do
-    schema = build(:task_schema)
-
-    payload =
-      schema.payload
-      |> Map.put("status", %{"state" => "completed"})
-      |> Map.put("artifacts", [
-        %{
-          "name" => "result",
-          "parts" => [%{"type" => "text", "text" => "42"}]
-        }
-      ])
-
-    %{schema | payload: payload}
-  end
-
-  # -------------------------------------------------------------------
-  # Task Payloads (maps for A2A responses)
-  # -------------------------------------------------------------------
 
   def build(:task_payload) do
     %{
@@ -386,12 +347,6 @@ defmodule Orchestrator.Factory do
   # -------------------------------------------------------------------
   # Helpers
   # -------------------------------------------------------------------
-
-  def insert!(factory_name, attrs \\ %{}) do
-    factory_name
-    |> build(attrs)
-    |> Repo.insert!()
-  end
 
   defp unique_id do
     :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)

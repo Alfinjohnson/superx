@@ -31,7 +31,6 @@ RUN mix deps.compile
 
 # Copy application code
 COPY lib lib
-COPY priv priv
 
 # Compile and build release
 RUN mix compile

@@ -39,10 +39,24 @@ defmodule Orchestrator.Task.PushConfig do
   @doc """
   Deliver a push event to all configs for a task.
   Uses Task.Supervisor to spawn async deliveries.
+
+  Accepts an optional per-request webhook configuration that takes precedence
+  over stored configs. Per-request webhook format:
+
+      %{"url" => "https://...", "hmacSecret" => "...", ...}
   """
-  @spec deliver_event(String.t(), map()) :: :ok
-  def deliver_event(task_id, stream_payload) do
-    configs = adapter().get_for_task(task_id)
+  @spec deliver_event(String.t(), map(), map() | nil) :: :ok
+  def deliver_event(task_id, stream_payload, per_request_webhook \\ nil) do
+    # Get stored configs
+    stored_configs = adapter().get_for_task(task_id)
+
+    # Build final config list: per-request webhook (if present) + stored configs
+    configs =
+      if per_request_webhook && is_map(per_request_webhook) do
+        [per_request_webhook | stored_configs]
+      else
+        stored_configs
+      end
 
     push_notifier =
       Application.get_env(:orchestrator, :push_notifier, Orchestrator.Infra.PushNotifier)

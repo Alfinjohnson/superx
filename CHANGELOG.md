@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Hybrid task management** - OTP-managed in-memory tasks by default; Postgres archival planned
+- **Per-request webhooks** - Pass webhook URL in `metadata.webhook` for ephemeral notifications without pre-configuration
+- Streaming integration test suite for `message/stream` and `tasks/subscribe` endpoints
+- Advanced stress testing scenarios for concurrent streaming connections
+- Long-running stream stability tests (60s+ sustained connections)
+- High-frequency SSE event flooding tests
+- Client disconnect mid-stream error handling tests
+- Stream initialization timeout tests
+- Simplified persistence surface; removed task storage mode helpers
+
+### Changed
+
+- Removed `SUPERX_TASK_STORAGE`; hybrid mode is default and requires no toggle
+- `tasks.get` and `tasks.subscribe` always available; return -32004 when task is missing
+- `PushConfig.deliver_event/3` now accepts optional per-request webhook configuration
+- Envelope struct includes `webhook` field for per-request webhook passthrough
+- Moved CHANGELOG.md to repository root for better visibility
+- Updated test documentation to reflect actual streaming test structure
+
+### Fixed
+
+- Health endpoint now correctly handles memory persistence mode (returns "n/a" for db status)
+
 ## [0.1.0] - 2024-12-23
 
 ### Added

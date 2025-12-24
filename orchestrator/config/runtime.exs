@@ -8,67 +8,20 @@ import Config
 # =============================================================================
 # Persistence Mode
 # =============================================================================
+# SuperX uses hybrid mode by default: OTP-managed in-memory task storage.
+# PostgreSQL support is available for optional task archival (future feature).
 
-persistence_mode =
-  case {config_env(), System.get_env("SUPERX_PERSISTENCE")} do
-    # Test env: default to memory unless explicitly set to postgres
-    {:test, value} when is_binary(value) ->
-      case String.trim(value) do
-        "postgres" -> :postgres
-        _ -> :memory
-      end
-
-    {:test, _} ->
-      :memory
-
-    # Non-test: default to postgres unless explicitly set to memory
-    {_, value} when is_binary(value) ->
-      case String.trim(value) do
-        "memory" -> :memory
-        _ -> :postgres
-      end
-
-    {_, _} ->
-      :postgres
-  end
+persistence_mode = :memory
 
 config :orchestrator, persistence: persistence_mode
+
+# Hybrid mode: tasks always stored in-memory via Horde/ETS
 
 # =============================================================================
 # Server Configuration
 # =============================================================================
 
 config :orchestrator, :port, String.to_integer(System.get_env("PORT", "4000"))
-
-# =============================================================================
-# PostgreSQL Configuration (only used in postgres mode)
-# =============================================================================
-
-if persistence_mode == :postgres do
-  database_url = System.get_env("DATABASE_URL")
-
-  if database_url do
-    config :orchestrator, Orchestrator.Repo,
-      url: database_url,
-      pool_size: String.to_integer(System.get_env("DB_POOL_SIZE", "10")),
-      queue_target: 50,
-      queue_interval: 1000,
-      ssl: System.get_env("DB_SSL", "false") == "true",
-      ssl_opts: [verify: :verify_none]
-  else
-    config :orchestrator, Orchestrator.Repo,
-      username: System.get_env("DB_USER", "postgres"),
-      password: System.get_env("DB_PASSWORD", "postgres"),
-      hostname: System.get_env("DB_HOST", "localhost"),
-      database: System.get_env("DB_NAME", "superx_prod"),
-      port: String.to_integer(System.get_env("DB_PORT", "5432")),
-      pool_size: String.to_integer(System.get_env("DB_POOL_SIZE", "10")),
-      queue_target: 50,
-      queue_interval: 1000,
-      ssl: System.get_env("DB_SSL", "false") == "true",
-      ssl_opts: [verify: :verify_none]
-  end
-end
 
 # =============================================================================
 # Agent Configuration
@@ -106,18 +59,4 @@ config :logger, level: log_level
 # Release Configuration
 # =============================================================================
 
-if config_env() == :prod do
-  # Ensure we have required configuration for production
-  if persistence_mode == :postgres do
-    database_url = System.get_env("DATABASE_URL")
-    db_host = System.get_env("DB_HOST")
-
-    if is_nil(database_url) and is_nil(db_host) do
-      raise """
-      PostgreSQL configuration missing.
-      Set DATABASE_URL or DB_HOST environment variable.
-      Or use SUPERX_PERSISTENCE=memory for stateless mode.
-      """
-    end
-  end
-end
+# No database required - hybrid mode uses in-memory storage by default

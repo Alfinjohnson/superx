@@ -54,8 +54,6 @@ defmodule Orchestrator.MixProject do
       {:jason, "~> 1.4"},
       {:req, "~> 0.4"},
       {:finch, "~> 0.18"},
-      {:ecto_sql, "~> 3.11"},
-      {:postgrex, "~> 0.19"},
       {:yaml_elixir, "~> 2.11"},
       {:telemetry, "~> 1.2"},
       # Clustering & Distribution
@@ -68,20 +66,10 @@ defmodule Orchestrator.MixProject do
   end
 
   defp aliases do
-    # Tests run in memory mode by default (no DB setup needed)
-    # Set SUPERX_PERSISTENCE=postgres to run with PostgreSQL
-    test_alias =
-      if System.get_env("SUPERX_PERSISTENCE") == "postgres" do
-        ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
-      else
-        ["test"]
-      end
-
+    # Tests run in memory mode by default (no DB needed)
     [
-      setup: ["deps.get", "ecto.setup"],
-      "ecto.setup": ["ecto.create", "ecto.migrate"],
-      "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: test_alias
+      setup: ["deps.get"],
+      test: ["test"]
     ]
   end
 

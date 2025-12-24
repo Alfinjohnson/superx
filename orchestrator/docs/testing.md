@@ -4,9 +4,10 @@ Comprehensive testing documentation for SuperX Orchestrator.
 
 ## Overview
 
-SuperX has a comprehensive test suite with **210 tests** covering:
+SuperX has a comprehensive test suite with **210+ tests** covering:
 - Unit tests for individual modules
-- Integration tests for API endpoints
+- Integration tests for API endpoints and streaming
+- Stress tests for high-load scenarios
 - Behavior tests for persistence layers
 - Circuit breaker and resilience testing
 
@@ -76,14 +77,17 @@ mix test --only describe:"circuit breaker"
 ### Filtering Tests
 
 ```bash
-# Exclude slow tests
-mix test --exclude slow
+# Exclude slow/stress tests
+mix test --exclude slow --exclude stress
 
 # Run only integration tests
 mix test --only integration
 
 # Exclude postgres-only tests (memory mode)
 mix test --exclude postgres_only
+
+# Run only stress tests
+mix test --only stress
 
 # Run only a specific tag
 mix test --only circuit_breaker
@@ -147,41 +151,41 @@ open cover/excoveralls.html
 
 ```
 test/
-├── orchestrator/
-│   ├── agent/
-│   │   ├── loader_test.exs      # Agent loading tests
-│   │   ├── registry_test.exs    # Registry tests
-│   │   ├── worker_test.exs      # Worker & circuit breaker
-│   │   └── supervisor_test.exs  # Supervision tree
-│   │
-│   ├── task/
-│   │   ├── store_test.exs       # Task persistence
-│   │   └── pubsub_test.exs      # Task subscriptions
-│   │
-│   ├── push/
-│   │   ├── notifier_test.exs    # Webhook delivery
-│   │   └── signer_test.exs      # HMAC/JWT signing
-│   │
-│   ├── protocol/
-│   │   └── a2a_test.exs         # A2A protocol tests
-│   │
-│   └── web/
-│       └── rpc_test.exs         # JSON-RPC endpoint tests
+├── agent/
+│   ├── loader_test.exs          # Agent loading tests
+│   ├── registry_test.exs        # Registry tests
+│   ├── worker_test.exs          # Worker & circuit breaker
+│   └── supervisor_test.exs      # Supervision tree
+│
+├── task/
+│   ├── store_test.exs           # Task persistence
+│   └── pubsub_test.exs          # Task subscriptions
+│
+├── infra/
+│   ├── http_client_test.exs     # HTTP client tests
+│   ├── sse_client_test.exs      # SSE event parsing & dispatch
+│   └── push_notifier_test.exs   # Webhook delivery & signing
+│
+├── protocol/
+│   └── a2a_test.exs             # A2A protocol adapter tests
 │
 ├── integration/
-│   ├── message_flow_test.exs    # End-to-end message tests
-│   ├── streaming_test.exs       # SSE streaming tests
-│   └── agent_lifecycle_test.exs # Agent management tests
+│   └── streaming_test.exs       # Router-level SSE streaming tests
+│
+├── stress/
+│   └── stress_test.exs          # High-load & concurrent streaming tests
+│
+├── router_test.exs              # JSON-RPC endpoint integration tests
+│
+├── fixtures/
+│   ├── agents.yml               # Sample agent config
+│   └── agent_card.json          # Sample agent card
 │
 └── support/
-    ├── fixtures/                # Test fixtures
-    │   ├── agents.yml           # Sample agent config
-    │   └── agent_card.json      # Sample agent card
-    ├── mocks/                   # Mock modules
-    │   └── mock_http.ex         # HTTP client mock
     ├── case.ex                  # Shared test case
     ├── conn_case.ex             # HTTP test helpers
-    └── data_case.ex             # Database test helpers
+    ├── data_case.ex             # Database test helpers
+    └── factory.ex               # Test data factories
 ```
 
 ### Test Tags
@@ -190,6 +194,7 @@ test/
 |-----|-------------|-------|
 | `@moduletag :postgres_only` | Requires PostgreSQL | Database-specific tests |
 | `@tag :integration` | Integration test | End-to-end flows |
+| `@tag :stress` | Stress/load test | High concurrency, long-running |
 | `@tag :slow` | Slow test | Timeouts, retries |
 | `@tag :circuit_breaker` | Circuit breaker tests | Resilience testing |
 
@@ -306,32 +311,136 @@ end
 ### Integration Tests
 
 ```elixir
-defmodule Orchestrator.Integration.MessageFlowTest do
+defmodule Orchestrator.Integration.StreamingTest do
   use Orchestrator.ConnCase
 
-  @tag :integration
+  @moduletag :postgres_only
 
-  describe "POST /rpc message/send" do
-    test "sends message and returns task", %{conn: conn} do
-      # Setup agent
-      {:ok, _} = setup_test_agent("test_agent")
+  describe "POST /rpc - message.stream" do
+    test "streams events from agent successfully" do
+      # Setup agent and stub
+      agent = create_test_agent("streaming-agent")
+      Req.Test.stub(Orchestrator.SSETest, fn conn ->
+        stream_test_events(conn)
+      end)
 
-      # Send request
-      response =
-        conn
-        |> post("/rpc", %{
-          jsonrpc: "2.0",
-          id: 1,
-          method: "message/send",
-          params: %{
-            agent: "test_agent",
-            message: %{role: "user", parts: [%{text: "Hello"}]}
-          }
+      # Make streaming request
+      request = %{
+        "jsonrpc" => "2.0",
+        "id" => "stream-1",
+        "method" => "message.stream",
+        "params" => %{
+          "agentId" => agent["id"],
+          "message" => "test message"
+        }
+      }
+
+      conn = json_post("/rpc", request)
+
+      # Verify stream initialization response
+      assert conn.status == 200
+      response = Jason.decode!(conn.resp_body)
+      assert response["result"]["taskId"] != nil
+    end
+  end
+
+  describe "POST /rpc - tasks.subscribe" do
+    test "streams task updates via SSE" do
+      # Create task
+      task = create_test_task("task-1", "working")
+
+      # Subscribe to task updates
+      parent = self()
+
+      Task.async(fn ->
+        request = %{
+          "jsonrpc" => "2.0",
+          "id" => "sub-1",
+          "method" => "tasks.subscribe",
+          "params" => %{"taskId" => task["id"]}
+        }
+
+        conn = json_post("/rpc", request)
+        assert conn.status == 200
+        assert conn.state == :chunked
+        send(parent, {:stream_started, conn})
+      end)
+
+      # Wait for subscription and update task
+      assert_receive {:stream_started, _conn}, 1000
+      update_task_status(task["id"], "completed")
+    end
+  end
+end
+```
+
+### Stress Tests
+
+```elixir
+defmodule Orchestrator.StressTest do
+  use Orchestrator.DataCase, async: false
+
+  @moduletag :stress
+
+  describe "Streaming stress" do
+    @tag timeout: 120_000
+    test "handles 50+ concurrent SSE connections" do
+      # Create 50 tasks
+      task_ids = create_test_tasks(50)
+      parent = self()
+
+      # Start 50 concurrent subscribers
+      subscriber_tasks =
+        Enum.map(task_ids, fn task_id ->
+          Task.async(fn ->
+            TaskStore.subscribe(task_id)
+            send(parent, {:subscribed, task_id})
+
+            receive do
+              {:task_update, _task} -> 1
+            after
+              10_000 -> 0
+            end
+          end)
+        end)
+
+      # Wait for all subscriptions
+      for _i <- 1..50, do: assert_receive {:subscribed, _}, 5_000
+
+      # Broadcast updates to all tasks
+      for task_id <- task_ids do
+        TaskStore.apply_status_update(%{
+          "taskId" => task_id,
+          "statusUpdate" => %{"state" => "completed"}
         })
-        |> json_response(200)
+      end
 
-      # Verify
-      assert response["result"]["task"]["status"] in ["submitted", "completed"]
+      # Verify all received updates
+      results = Task.await_many(subscriber_tasks, 15_000)
+      assert Enum.sum(results) >= 45
+    end
+
+    @tag timeout: 90_000
+    test "handles long-running streams (60s+)" do
+      task_id = create_test_task("long-stream")
+      
+      # Subscribe for 60 seconds
+      stream_task = Task.async(fn ->
+        TaskStore.subscribe(task_id)
+        collect_updates_for_duration(60_000, [])
+      end)
+
+      # Send updates every second for 60 seconds
+      for i <- 1..60 do
+        TaskStore.apply_status_update(%{
+          "taskId" => task_id,
+          "statusUpdate" => %{"message" => "Second #{i}"}
+        })
+        Process.sleep(1_000)
+      end
+
+      updates = Task.await(stream_task, 70_000)
+      assert length(updates) >= 55
     end
   end
 end

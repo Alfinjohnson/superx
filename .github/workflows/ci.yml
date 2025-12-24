@@ -17,10 +17,10 @@ defaults:
 
 jobs:
   # ===========================================================================
-  # Test in Memory Mode (fast, no DB)
+  # Run Tests
   # ===========================================================================
-  test-memory:
-    name: Test (Memory Mode)
+  test:
+    name: Test
     runs-on: ubuntu-latest
 
     steps:
@@ -155,7 +155,7 @@ jobs:
   build:
     name: Build Release
     runs-on: ubuntu-latest
-    needs: [test-memory, test-postgres, quality]
+    needs: [test, quality]
 
     steps:
       - uses: actions/checkout@v4
@@ -198,7 +198,7 @@ jobs:
   docker:
     name: Build Docker Image
     runs-on: ubuntu-latest
-    needs: [test-memory, test-postgres]
+    needs: [test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:

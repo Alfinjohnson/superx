@@ -176,16 +176,12 @@ defmodule Orchestrator.Infra.SSEClientTest do
   end
 
   describe "dispatch routing" do
-    # These tests use Repo.insert! directly
-    @describetag :postgres_only
-
     test "dispatches statusUpdate to TaskStore.apply_status_update" do
-      task_id = "task-#{unique_id()}"
+      task_id = "task-#{local_unique_id()}"
 
-      # Create task first
-      task = Factory.build(:task_schema, id: task_id)
-      task = %{task | payload: Map.put(task.payload, "id", task_id)}
-      Orchestrator.Repo.insert!(task)
+      # Create task first via Store
+      task = %{"id" => task_id, "status" => %{"state" => "submitted"}, "artifacts" => []}
+      TaskStore.put(task)
 
       update = %{
         "statusUpdate" => %{
@@ -203,12 +199,11 @@ defmodule Orchestrator.Infra.SSEClientTest do
     end
 
     test "dispatches artifactUpdate to TaskStore.apply_artifact_update" do
-      task_id = "task-#{unique_id()}"
+      task_id = "task-#{local_unique_id()}"
 
-      # Create task first
-      task = Factory.build(:task_schema, id: task_id)
-      task = %{task | payload: Map.put(task.payload, "id", task_id)}
-      Orchestrator.Repo.insert!(task)
+      # Create task first via Store
+      task = %{"id" => task_id, "status" => %{"state" => "working"}, "artifacts" => []}
+      TaskStore.put(task)
 
       update = %{
         "artifactUpdate" => %{
@@ -314,7 +309,7 @@ defmodule Orchestrator.Infra.SSEClientTest do
   # Helper functions for testing SSE behavior
   # -------------------------------------------------------------------
 
-  defp start_sse_with_stub(opts) do
+  defp start_sse_with_stub(_opts) do
     # Simplified stub - just return a task that exits immediately
     Task.start_link(fn ->
       # Simulate SSE client behavior
@@ -383,7 +378,7 @@ defmodule Orchestrator.Infra.SSEClientTest do
 
   defp dispatch_result(%{"message" => message}) do
     task = %{
-      "id" => message["id"] || unique_id(),
+      "id" => message["id"] || local_unique_id(),
       "message" => message,
       "status" => %{"state" => "completed"}
     }
@@ -393,7 +388,7 @@ defmodule Orchestrator.Infra.SSEClientTest do
 
   defp dispatch_result(_), do: :ok
 
-  defp unique_id do
+  defp local_unique_id do
     :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
   end
 end
