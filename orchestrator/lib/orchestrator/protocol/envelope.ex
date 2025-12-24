@@ -44,7 +44,8 @@ defmodule Orchestrator.Protocol.Envelope do
     :payload,
     :metadata,
     :agent_id,
-    :rpc_id
+    :rpc_id,
+    :webhook
   ]
 
   @type t :: %__MODULE__{
@@ -57,7 +58,8 @@ defmodule Orchestrator.Protocol.Envelope do
           payload: map() | nil,
           metadata: map() | nil,
           agent_id: String.t() | nil,
-          rpc_id: String.t() | nil
+          rpc_id: String.t() | nil,
+          webhook: map() | nil
         }
 
   @doc """
@@ -76,7 +78,8 @@ defmodule Orchestrator.Protocol.Envelope do
       payload: get_attr(attrs, :payload, "payload"),
       metadata: get_attr(attrs, :metadata, "metadata"),
       agent_id: get_attr(attrs, :agent_id, "agentId"),
-      rpc_id: get_attr(attrs, :rpc_id, "rpcId")
+      rpc_id: get_attr(attrs, :rpc_id, "rpcId"),
+      webhook: get_attr(attrs, :webhook, "webhook")
     }
   end
 

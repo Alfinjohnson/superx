@@ -72,8 +72,20 @@ defmodule Orchestrator.Infra.SSEClient do
     }
 
     case Finch.stream(req, Orchestrator.Finch, initial_state, &handle_chunk/2) do
-      {:ok, _} -> :ok
-      {:error, reason} -> Logger.warning("SSE client failed", reason: inspect(reason))
+      {:ok, _} ->
+        :ok
+
+      {:error, %Mint.TransportError{reason: reason}, state} ->
+        Logger.warning("SSE client transport error", reason: inspect(reason), rpc_id: rpc_id)
+        send(state.reply_to, {:stream_error, state.rpc_id, {:transport_error, reason}})
+
+      {:error, reason, state} ->
+        Logger.warning("SSE client failed with state", reason: inspect(reason), rpc_id: rpc_id)
+        send(state.reply_to, {:stream_error, state.rpc_id, reason})
+
+      {:error, reason} ->
+        Logger.warning("SSE client failed", reason: inspect(reason), rpc_id: rpc_id)
+        send(reply_to, {:stream_error, rpc_id, reason})
     end
   end
 

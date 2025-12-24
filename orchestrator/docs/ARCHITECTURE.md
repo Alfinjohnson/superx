@@ -31,22 +31,22 @@ SuperX Orchestrator is built on Elixir/OTP, leveraging the BEAM VM's strengths f
 │  ┌───────▼─────────────▼─────────────▼──────────────────────────────────┐   │
 │  │                        Core Services                                  │   │
 │  │                                                                       │   │
-│  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐  │   │
-│  │  │  Agent.Manager  │  │   Task.Store    │  │   Push.Notifier     │  │   │
-│  │  │  ┌───────────┐  │  │  ┌───────────┐  │  │  ┌───────────────┐  │  │   │
-│  │  │  │ Registry  │  │  │  │ Memory    │  │  │  │ HMAC Signer   │  │  │   │
-│  │  │  ├───────────┤  │  │  │    or     │  │  │  │ JWT Signer    │  │  │   │
-│  │  │  │ Workers   │  │  │  │ Postgres  │  │  │  │ Token Auth    │  │  │   │
-│  │  │  └───────────┘  │  │  └───────────┘  │  │  └───────────────┘  │  │   │
+│  │  ┌─────────────────┐  ┌───────────────────────────┐  ┌─────────────────────┐  │   │
+│  │  │  Agent.Manager  │  │   Task.Store (Hybrid)     │  │   Push.Notifier     │  │   │
+│  │  │  ┌───────────┐  │  │  ┌─────────────────────┐  │  │  ┌───────────────┐  │  │   │
+│  │  │  │ Registry  │  │  │  │ Distributed (OTP)   │  │  │  │ HMAC Signer   │  │  │   │
+│  │  │  ├───────────┤  │  │  │ Postgres (archive)  │  │  │  │ JWT Signer    │  │  │   │
+│  │  │  │ Workers   │  │  │  └─────────────────────┘  │  │  │ Token Auth    │  │  │   │
+│  │  │  └───────────┘  │  └───────────────────────────┘  │  └───────────────┘  │  │   │
 │  │  └────────┬────────┘  └────────┬────────┘  └─────────┬───────────┘  │   │
 │  └───────────┼────────────────────┼─────────────────────┼───────────────┘   │
 │              │                    │                     │                    │
 │  ┌───────────▼────────────────────▼─────────────────────▼───────────────┐   │
 │  │                         Data Layer                                    │   │
-│  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐  │   │
-│  │  │   Ecto.Repo     │  │   ETS Tables    │  │   HttpClient        │  │   │
-│  │  │  (PostgreSQL)   │  │  (Memory Mode)  │  │    (Finch)          │  │   │
-│  │  └─────────────────┘  └─────────────────┘  └─────────────────────┘  │   │
+│  │  ┌─────────────────┐  ┌───────────────────────────┐  ┌─────────────────────┐  │   │
+│  │  │   Ecto.Repo     │  │   Distributed In-Memory   │  │   HttpClient        │  │   │
+│  │  │  (PostgreSQL)   │  │   (OTP + ETS per node)    │  │    (Finch)          │  │   │
+│  │  └─────────────────┘  └───────────────────────────┘  └─────────────────────┘  │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -68,10 +68,11 @@ Orchestrator.Application (Application)
 ├── Orchestrator.Repo (Ecto.Repo)
 │   └── PostgreSQL Connection Pool
 │
-├── Orchestrator.TaskStore.Supervisor (Supervisor)
-│   └── Orchestrator.Task.Store (GenServer)
-│       ├── Memory: ETS tables
-│       └── Postgres: Database operations
+├── Orchestrator.Task.Store.Distributed (GenServer)
+│   └── Hybrid in-memory task storage replicated across nodes (OTP/RPC)
+│
+├── Orchestrator.Task.PushConfig.Memory|Postgres (GenServer/Ecto)
+│   └── Push config storage (memory or Postgres)
 │
 ├── Orchestrator.Agent.Supervisor (Supervisor)
 │   │
@@ -90,7 +91,7 @@ Orchestrator.Application (Application)
 │   └── HTTP connection pool
 │
 ├── Orchestrator.Cluster.Topology (libcluster.Cluster)
-│   └── Node discovery & clustering
+│   └── Node discovery & clustering (enables distributed task replication)
 │
 └── Bandit (HTTP Server)
     └── Plug pipeline → Router

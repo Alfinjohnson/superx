@@ -1,13 +1,13 @@
 agents:
   check_prime_agent:
     version: 1.0.0
-    url: http://localhost:8001/a2a/check_prime_agent
+    url: http://host.docker.internal:8001/a2a/check_prime_agent
     bearer: ""
     protocol: a2a
     protocolVersion: 0.3.0
     metadata:
       agentCard:
-        url: "http://localhost:8001/a2a/check_prime_agent/.well-known/agent-card.json"
+        url: "http://host.docker.internal:8001/a2a/check_prime_agent/.well-known/agent-card.json"
         name: check_prime_agent
         version: "1.0.0"
         description: An agent specialized in checking whether numbers are prime. It can efficiently determine the primality of individual numbers or lists of numbers.

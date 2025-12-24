@@ -5,8 +5,6 @@ defmodule Orchestrator.Application do
 
   use Application
 
-  alias Orchestrator.Persistence
-
   @impl true
   def start(_type, _args) do
     children =
@@ -49,20 +47,12 @@ defmodule Orchestrator.Application do
 
   # Add persistence-specific children based on mode
   defp prepend_persistence_children(children) do
-    persistence_children =
-      case Persistence.mode() do
-        :postgres ->
-          # PostgreSQL mode: start Repo (ETS stores not needed)
-          [Orchestrator.Repo]
-
-        :memory ->
-          # Memory mode: start ETS-backed stores
-          [
-            Orchestrator.Task.Store.Memory,
-            Orchestrator.Agent.Store.Memory,
-            Orchestrator.Task.PushConfig.Memory
-          ]
-      end
+    # Memory mode: start ETS-backed stores
+    persistence_children = [
+      Orchestrator.Task.Store.Distributed,
+      Orchestrator.Agent.Store.Memory,
+      Orchestrator.Task.PushConfig.Memory
+    ]
 
     persistence_children ++ children
   end

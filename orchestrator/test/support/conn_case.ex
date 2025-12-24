@@ -6,9 +6,6 @@ defmodule Orchestrator.ConnCase do
   Such tests rely on `Plug.Test` and also
   import other functionality to make it easier
   to build and query Plug connections.
-
-  In postgres mode, the SQL sandbox is enabled so changes
-  done to the database are reverted at the end of every test.
   """
 
   use ExUnit.CaseTemplate

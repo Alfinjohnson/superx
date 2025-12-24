@@ -1,11 +1,7 @@
 defmodule Orchestrator.AgentRegistryTest do
-  use Orchestrator.DataCase
-
-  # This test module uses Repo directly and debug_load_agents, skip in memory mode
-  @moduletag :postgres_only
+  use ExUnit.Case, async: false
 
   alias Orchestrator.Agent.Store, as: AgentStore
-  alias Orchestrator.Schema.Agent, as: AgentSchema
 
   setup do
     prev_agents = Application.get_env(:orchestrator, :agents)
@@ -19,8 +15,6 @@ defmodule Orchestrator.AgentRegistryTest do
         "bearer" => "CODE_API_TOKEN"
       }
     })
-
-    Orchestrator.Repo.delete_all(AgentSchema)
 
     on_exit(fn ->
       Application.put_env(:orchestrator, :agents, prev_agents)

@@ -1,21 +1,6 @@
-# Configure ExUnit based on persistence mode
-# Use Orchestrator.Persistence.mode() which checks env var and config
-persistence_mode = Orchestrator.Persistence.mode()
-
-exclude_tags =
-  if persistence_mode == :memory do
-    # Exclude PostgreSQL-specific tests in memory mode
-    [:postgres_only]
-  else
-    []
-  end
-
-ExUnit.start(exclude: exclude_tags)
-
-# Setup Ecto Sandbox for test isolation (only in postgres mode)
-if persistence_mode == :postgres do
-  Ecto.Adapters.SQL.Sandbox.mode(Orchestrator.Repo, :manual)
-end
+# Configure ExUnit
+# All tests run in memory mode (hybrid)
+ExUnit.start()
 
 # Define Mox mocks
 Mox.defmock(Orchestrator.MockHttpClient, for: Orchestrator.HttpClient.Behaviour)

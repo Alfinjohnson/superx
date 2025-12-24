@@ -28,10 +28,9 @@ mix deps.get
 mix compile
 
 # Quick start (memory mode - no database required)
-$env:SUPERX_PERSISTENCE="memory"; mix run --no-halt  # PowerShell
-SUPERX_PERSISTENCE=memory mix run --no-halt          # Linux/macOS
+mix run --no-halt
 
-# With PostgreSQL
+# With PostgreSQL (optional)
 docker compose -f ../docker-compose.yml up -d db
 mix ecto.setup
 mix run --no-halt
@@ -40,11 +39,11 @@ mix run --no-halt
 ### Running Tests
 
 ```bash
-# Memory mode (fast, 173 tests)
-$env:SUPERX_PERSISTENCE="memory"; mix test --exclude postgres_only
+# Memory mode (fast, default)
+mix test
 
-# PostgreSQL mode (full suite, 210 tests)
-$env:SUPERX_PERSISTENCE="postgres"; mix test
+# Include PostgreSQL-only tests (requires DB)
+mix test --include postgres_only
 
 # With coverage report
 mix coveralls
@@ -206,9 +205,8 @@ mix phx.digest                # Compile assets
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | 4000 | HTTP server port |
-| `SUPERX_PERSISTENCE` | postgres | `postgres` or `memory` |
 | `AGENTS_FILE` | — | Path to agents YAML |
-| `DATABASE_URL` | — | PostgreSQL connection |
+| `DATABASE_URL` | — | PostgreSQL connection (optional) |
 
 See [Configuration Guide](docs/configuration.md) for complete list.
 

@@ -8,26 +8,36 @@ Strategic roadmap for SuperX Agentic Gateway Orchestrator development.
 
 SuperX is a production-ready A2A Protocol gateway with:
 - Full A2A v0.3.0 protocol implementation
-- Dual persistence modes (PostgreSQL / Memory)
+- OTP-distributed task management via Horde (hybrid mode)
+- Per-request webhooks for real-time notifications
 - Circuit breaker and backpressure patterns
 - Push notifications with HMAC/JWT/Token auth
 - Erlang clustering support (gossip, DNS, Kubernetes)
-- 210 tests with comprehensive coverage
+- 180+ tests with comprehensive coverage
 
 ---
 
-## Feature 0 – Stateless Core (In Progress)
+## Feature 0 – Hybrid Task Management (In Progress)
 
-**Goal**: Make SuperX stateless by default for easy horizontal scaling.
+**Goal**: OTP-powered distributed task management without external dependencies.
 
 | Task | Status | Description |
 |------|--------|-------------|
-| Memory persistence mode | ✅ Done | No DB dependency for stateless deployments |
-| Agent configs from YAML/env | ✅ Done | GitOps-friendly configuration via `AGENTS_FILE` |
-| Tasks pass-through | 🔄 Planned | Clients own task history; SuperX routes only |
-| Per-request webhooks | 🔄 Planned | Webhook URLs provided per request, not stored |
-| Circuit breaker in ETS | ✅ Done | Per-node resilience state |
-| Documentation update | ✅ Done | Production-grade docs complete |
+| Horde-based task registry | 🔄 In Progress | Distributed in-memory task storage via OTP |
+| Per-request webhooks | ✅ Done | Webhook URLs provided per request, delivered immediately |
+| Distributed task.get/subscribe | 🔄 In Progress | Query tasks from Horde cluster (no DB needed) |
+| Task lifecycle management | 🔄 Planned | Active task tracking, completion archival |
+| Optional Postgres persistence | 📋 Planned | Archive completed tasks for audit/history (future) |
+| Documentation update | 🔄 In Progress | Hybrid mode architecture and usage guide |
+
+### Hybrid Mode Benefits
+
+- **Zero external dependencies** - Pure OTP, no required database
+- **Automatic distribution** - Tasks replicated across cluster
+- **Low latency** - In-memory access, no DB queries
+- **All APIs work** - `tasks.get`, `tasks.subscribe`, `message.send`, `message.stream`
+- **Future-proof** - Postgres support can be added without breaking changes
+- **Scalable** - Horizontal scaling built-in via Horde
 
 ---
 
@@ -153,10 +163,10 @@ SuperX is a production-ready A2A Protocol gateway with:
 
 ### Optional Storage
 
-- Plug-in architecture for history storage
-- PostgreSQL adapter (existing)
-- Redis adapter (planned)
-- S3/blob storage for artifacts
+- Postgres adapter for completed task archival (planned)
+- Plug-in architecture for custom storage backends
+- Redis adapter for high-performance caching (future)
+- S3/blob storage for artifact persistence (future)
 
 ---
 
@@ -208,10 +218,11 @@ Standard A2A methods remain unchanged. Extensions live under `superx/*` namespac
 
 ### Stateless by Default
 
-- No required external dependencies
-- Easy horizontal scaling
-- Storage is optional and pluggable
-- State can be externalized (Redis, Postgres)
+- OTP-managed distributed state via Horde
+- No required external dependencies (pure Erlang clustering)
+- Easy horizontal scaling with automatic task replication
+- Optional Postgres persistence for audit trail (future)
+- Per-request webhooks for immediate notification delivery
 
 ### Backward Safe
 

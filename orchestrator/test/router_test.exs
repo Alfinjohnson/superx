@@ -6,20 +6,11 @@ defmodule Orchestrator.RouterTest do
   """
   use Orchestrator.ConnCase
 
-  # This test module uses Repo directly
-  @moduletag :postgres_only
-
   alias Orchestrator.Agent.Store, as: AgentStore
   alias Orchestrator.Task.Store, as: TaskStore
   alias Orchestrator.Router
-  alias Orchestrator.Schema.Agent, as: AgentSchema
-  alias Orchestrator.Schema.Task, as: TaskSchema
 
   setup do
-    # Clear test data
-    Orchestrator.Repo.delete_all(AgentSchema)
-    Orchestrator.Repo.delete_all(TaskSchema)
-
     # Reset config
     prev_agents = Application.get_env(:orchestrator, :agents)
     Application.put_env(:orchestrator, :agents, %{})
@@ -49,8 +40,7 @@ defmodule Orchestrator.RouterTest do
       assert conn.status == 200
       response = Jason.decode!(conn.resp_body)
 
-      assert response["status"] in ["ok", "degraded"]
-      assert response["db"] in ["ok", "error"]
+      assert response["status"] == "ok"
       assert is_binary(response["node"])
     end
   end

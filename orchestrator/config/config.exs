@@ -4,7 +4,7 @@ import Config
 # Load .env for local development (compile-time)
 # =============================================================================
 
-if config_env() in [:dev, :test] do
+if config_env() == :dev do
   env_file = Path.expand("../../.env", __DIR__)
 
   if File.exists?(env_file) do
@@ -38,11 +38,6 @@ if config_env() in [:dev, :test] do
     end)
   end
 end
-
-config :orchestrator, ecto_repos: [Orchestrator.Repo]
-
-# Persistence mode determined by SUPERX_PERSISTENCE env var
-# Defaults handled in runtime.exs
 
 config :orchestrator,
   agents_file: System.get_env("AGENTS_FILE"),
@@ -85,19 +80,6 @@ config :orchestrator, :cluster,
 
 config :req,
   finch: Finch
-
-# PostgreSQL configuration - all values from env vars
-config :orchestrator, Orchestrator.Repo,
-  username: System.get_env("DB_USER"),
-  password: System.get_env("DB_PASSWORD"),
-  hostname: System.get_env("DB_HOST"),
-  port: String.to_integer(System.get_env("DB_PORT", "5432")),
-  database: System.get_env("DB_NAME"),
-  pool_size: String.to_integer(System.get_env("DB_POOL_SIZE", "10")),
-  queue_target: 50,
-  queue_interval: 1000,
-  migration_primary_key: [type: :string],
-  priv: "priv/db"
 
 config :logger, :console,
   format: "$time $metadata[level] $message\n",
