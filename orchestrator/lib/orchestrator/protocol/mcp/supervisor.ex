@@ -80,7 +80,9 @@ defmodule Orchestrator.Protocol.MCP.Supervisor do
   """
   @spec list_sessions() :: [%{server_id: String.t(), pid: pid()}]
   def list_sessions do
-    Registry.select(Orchestrator.MCP.SessionRegistry, [{{:"$1", :"$2", :_}, [], [{{:"$1", :"$2"}}]}])
+    Registry.select(Orchestrator.MCP.SessionRegistry, [
+      {{:"$1", :"$2", :_}, [], [{{:"$1", :"$2"}}]}
+    ])
     |> Enum.map(fn {server_id, pid} -> %{server_id: server_id, pid: pid} end)
   end
 end

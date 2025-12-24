@@ -104,7 +104,10 @@ defmodule Orchestrator.Protocol.MCP.Transport.STDIO do
     # Spawn the process
     case spawn_process(state) do
       {:ok, port, os_pid} ->
-        Logger.info("MCP STDIO transport started: #{command} #{Enum.join(args, " ")} (pid: #{os_pid})")
+        Logger.info(
+          "MCP STDIO transport started: #{command} #{Enum.join(args, " ")} (pid: #{os_pid})"
+        )
+
         {:ok, %{state | port: port, os_pid: os_pid}}
 
       {:error, reason} ->

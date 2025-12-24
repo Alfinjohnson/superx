@@ -233,7 +233,13 @@ defmodule Orchestrator.Protocol.MCP.Session do
         start_time = System.monotonic_time(:millisecond)
         request = MCPAdapter.build_tool_call(tool_name, arguments)
         # Store start time for telemetry on response
-        request_with_meta = Map.put(request, :_meta, %{start_time: start_time, tool_name: tool_name, type: :tool_call})
+        request_with_meta =
+          Map.put(request, :_meta, %{
+            start_time: start_time,
+            tool_name: tool_name,
+            type: :tool_call
+          })
+
         send_request(state, request_with_meta, from)
 
       {:error, _} = err ->
@@ -261,7 +267,10 @@ defmodule Orchestrator.Protocol.MCP.Session do
       :ok ->
         start_time = System.monotonic_time(:millisecond)
         request = MCPAdapter.build_resource_read(uri)
-        request_with_meta = Map.put(request, :_meta, %{start_time: start_time, uri: uri, type: :resource_read})
+
+        request_with_meta =
+          Map.put(request, :_meta, %{start_time: start_time, uri: uri, type: :resource_read})
+
         send_request(state, request_with_meta, from)
 
       {:error, _} = err ->
@@ -390,19 +399,23 @@ defmodule Orchestrator.Protocol.MCP.Session do
 
   def handle_info({:mcp_error, reason}, state) do
     Logger.error("MCP transport error: #{inspect(reason)}")
+
     emit_telemetry(:transport_error, %{}, %{
       server_id: state.server_id,
       error: inspect(reason)
     })
+
     {:noreply, %{state | session_state: :closed}}
   end
 
   def handle_info({:mcp_closed, reason}, state) do
     Logger.info("MCP connection closed: #{inspect(reason)}")
+
     emit_telemetry(:session_stop, %{}, %{
       server_id: state.server_id,
       reason: inspect(reason)
     })
+
     {:noreply, %{state | session_state: :closed}}
   end
 
@@ -412,6 +425,7 @@ defmodule Orchestrator.Protocol.MCP.Session do
       server_id: state.server_id,
       reason: inspect(reason)
     })
+
     do_close(state)
   end
 
@@ -745,7 +759,11 @@ defmodule Orchestrator.Protocol.MCP.Session do
     )
   end
 
-  defp emit_request_telemetry(%{type: :tool_call, start_time: start_time, tool_name: tool_name}, state, result) do
+  defp emit_request_telemetry(
+         %{type: :tool_call, start_time: start_time, tool_name: tool_name},
+         state,
+         result
+       ) do
     duration_ms = System.monotonic_time(:millisecond) - start_time
     status = if match?(:ok, result), do: :ok, else: :error
 
@@ -756,7 +774,11 @@ defmodule Orchestrator.Protocol.MCP.Session do
     })
   end
 
-  defp emit_request_telemetry(%{type: :resource_read, start_time: start_time, uri: uri}, state, result) do
+  defp emit_request_telemetry(
+         %{type: :resource_read, start_time: start_time, uri: uri},
+         state,
+         result
+       ) do
     duration_ms = System.monotonic_time(:millisecond) - start_time
     status = if match?(:ok, result), do: :ok, else: :error
 
@@ -774,13 +796,25 @@ end
 defmodule Orchestrator.MCP.Session do
   @moduledoc false
   defdelegate start_link(server_config, opts \\ []), to: Orchestrator.Protocol.MCP.Session
-  defdelegate call_tool(session, tool_name, arguments \\ %{}, timeout \\ 30_000), to: Orchestrator.Protocol.MCP.Session
+
+  defdelegate call_tool(session, tool_name, arguments \\ %{}, timeout \\ 30_000),
+    to: Orchestrator.Protocol.MCP.Session
+
   defdelegate list_tools(session, timeout \\ 30_000), to: Orchestrator.Protocol.MCP.Session
-  defdelegate read_resource(session, uri, timeout \\ 30_000), to: Orchestrator.Protocol.MCP.Session
+
+  defdelegate read_resource(session, uri, timeout \\ 30_000),
+    to: Orchestrator.Protocol.MCP.Session
+
   defdelegate list_resources(session, timeout \\ 30_000), to: Orchestrator.Protocol.MCP.Session
-  defdelegate get_prompt(session, prompt_name, arguments \\ %{}, timeout \\ 30_000), to: Orchestrator.Protocol.MCP.Session
+
+  defdelegate get_prompt(session, prompt_name, arguments \\ %{}, timeout \\ 30_000),
+    to: Orchestrator.Protocol.MCP.Session
+
   defdelegate list_prompts(session, timeout \\ 30_000), to: Orchestrator.Protocol.MCP.Session
-  defdelegate request(session, method, params \\ %{}, timeout \\ 30_000), to: Orchestrator.Protocol.MCP.Session
+
+  defdelegate request(session, method, params \\ %{}, timeout \\ 30_000),
+    to: Orchestrator.Protocol.MCP.Session
+
   defdelegate info(session), to: Orchestrator.Protocol.MCP.Session
   defdelegate get_agent_card(session), to: Orchestrator.Protocol.MCP.Session
   defdelegate close(session), to: Orchestrator.Protocol.MCP.Session

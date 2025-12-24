@@ -322,10 +322,12 @@ defmodule Orchestrator.Protocol.MCP.Adapter do
     %{
       "protocolVersion" => @protocol_version,
       "capabilities" => env.payload["capabilities"] || build_client_capabilities(),
-      "clientInfo" => env.payload["clientInfo"] || %{
-        "name" => "orchestrator",
-        "version" => "0.1.0"
-      }
+      "clientInfo" =>
+        env.payload["clientInfo"] ||
+          %{
+            "name" => "orchestrator",
+            "version" => "0.1.0"
+          }
     }
   end
 
@@ -404,7 +406,10 @@ defmodule Orchestrator.Protocol.Adapters.MCP do
   defdelegate build_initialize_request(opts \\ %{}), to: Orchestrator.Protocol.MCP.Adapter
   defdelegate build_client_capabilities(opts \\ %{}), to: Orchestrator.Protocol.MCP.Adapter
   defdelegate parse_server_capabilities(result), to: Orchestrator.Protocol.MCP.Adapter
-  defdelegate build_tool_call(tool_name, arguments, id \\ nil), to: Orchestrator.Protocol.MCP.Adapter
+
+  defdelegate build_tool_call(tool_name, arguments, id \\ nil),
+    to: Orchestrator.Protocol.MCP.Adapter
+
   defdelegate build_resource_read(uri, id \\ nil), to: Orchestrator.Protocol.MCP.Adapter
   defdelegate notification?(method), to: Orchestrator.Protocol.MCP.Adapter
   defdelegate server_request?(method), to: Orchestrator.Protocol.MCP.Adapter

@@ -29,8 +29,8 @@ defmodule Orchestrator.Protocol.Methods do
   3. Implement handling in router if needed
   """
 
+  # A2A methods
   @type canonical_method ::
-          # A2A methods
           :send_message
           | :stream_message
           | :get_task

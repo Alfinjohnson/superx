@@ -243,13 +243,21 @@ defmodule Orchestrator.Agent.Worker do
 
           {:error, {:process_exited, _code} = reason} ->
             # Process crash - should trigger circuit breaker
-            Logger.warning("MCP process crashed", agent_id: state.agent_id, error: inspect(reason))
+            Logger.warning("MCP process crashed",
+              agent_id: state.agent_id,
+              error: inspect(reason)
+            )
+
             emit_telemetry(:call_error, state, env, %{error: reason, breaker_trigger: true})
             {:error, {:mcp_error, reason}}
 
           {:error, {:transport_error, _} = reason} ->
             # Transport failure - should trigger circuit breaker
-            Logger.warning("MCP transport error", agent_id: state.agent_id, error: inspect(reason))
+            Logger.warning("MCP transport error",
+              agent_id: state.agent_id,
+              error: inspect(reason)
+            )
+
             emit_telemetry(:call_error, state, env, %{error: reason, breaker_trigger: true})
             {:error, {:mcp_error, reason}}
 

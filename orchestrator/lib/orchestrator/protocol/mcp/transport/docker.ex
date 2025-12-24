@@ -43,7 +43,8 @@ defmodule Orchestrator.Protocol.MCP.Transport.Docker do
   require Logger
 
   @docker_command "docker"
-  @pull_timeout 300_000  # 5 minutes for image pull
+  # 5 minutes for image pull
+  @pull_timeout 300_000
 
   @type package_config :: %{
           name: String.t(),
@@ -139,9 +140,10 @@ defmodule Orchestrator.Protocol.MCP.Transport.Docker do
     Logger.info("Executing: docker #{Enum.join(args, " ")}")
 
     # Use Task for timeout handling
-    task = Task.async(fn ->
-      System.cmd(@docker_command, args, stderr_to_stdout: true)
-    end)
+    task =
+      Task.async(fn ->
+        System.cmd(@docker_command, args, stderr_to_stdout: true)
+      end)
 
     case Task.yield(task, @pull_timeout) || Task.shutdown(task) do
       {:ok, {_output, 0}} ->
@@ -172,8 +174,10 @@ defmodule Orchestrator.Protocol.MCP.Transport.Docker do
       "type" => "stdio",
       "command" => @docker_command,
       "args" => docker_args,
-      "env" => %{},  # Env passed to docker run, not the command
-      "_oci_image" => image_name  # Track original image for debugging
+      # Env passed to docker run, not the command
+      "env" => %{},
+      # Track original image for debugging
+      "_oci_image" => image_name
     }
   end
 
@@ -293,8 +297,13 @@ defmodule Orchestrator.MCP.Transport.Docker do
   defdelegate ensure_image_available(image_name), to: Orchestrator.Protocol.MCP.Transport.Docker
   defdelegate image_exists?(image_name), to: Orchestrator.Protocol.MCP.Transport.Docker
   defdelegate pull_image(image_name), to: Orchestrator.Protocol.MCP.Transport.Docker
-  defdelegate build_stdio_config(image_name, original_config), to: Orchestrator.Protocol.MCP.Transport.Docker
-  defdelegate build_docker_args(image_name, env, config), to: Orchestrator.Protocol.MCP.Transport.Docker
+
+  defdelegate build_stdio_config(image_name, original_config),
+    to: Orchestrator.Protocol.MCP.Transport.Docker
+
+  defdelegate build_docker_args(image_name, env, config),
+    to: Orchestrator.Protocol.MCP.Transport.Docker
+
   defdelegate list_mcp_images(), to: Orchestrator.Protocol.MCP.Transport.Docker
   defdelegate remove_image(image_name), to: Orchestrator.Protocol.MCP.Transport.Docker
   defdelegate inspect_image(image_name), to: Orchestrator.Protocol.MCP.Transport.Docker

@@ -147,15 +147,16 @@ defmodule Orchestrator.Protocol.MCP.Transport.Behaviour do
 
   def parse_config(%{"url" => url} = agent) do
     # Legacy format - assume HTTP
-    {:ok, %{
-      type: :http,
-      url: url,
-      command: nil,
-      args: [],
-      env: %{},
-      headers: build_headers(agent),
-      timeout: 30_000
-    }}
+    {:ok,
+     %{
+       type: :http,
+       url: url,
+       command: nil,
+       args: [],
+       env: %{},
+       headers: build_headers(agent),
+       timeout: 30_000
+     }}
   end
 
   def parse_config(_), do: {:error, :invalid_transport_config}

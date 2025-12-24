@@ -21,6 +21,7 @@ defmodule Orchestrator.Protocol.MCP.SupervisorTest do
         {:ok, pid} ->
           assert Process.alive?(pid)
           GenServer.stop(pid)
+
         {:error, _} ->
           # May fail if transport config is invalid
           assert true

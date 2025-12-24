@@ -120,6 +120,9 @@ end
 # Backward compatibility alias
 defmodule Orchestrator.Web.Proxy do
   @moduledoc false
-  defdelegate handle_request(conn, agent_id, rpc_id, wire_method, payload), to: Orchestrator.Protocol.A2A.Proxy
-  defdelegate forward_to_agent(conn, agent_id, agent, adapter, rpc_id, payload), to: Orchestrator.Protocol.A2A.Proxy
+  defdelegate handle_request(conn, agent_id, rpc_id, wire_method, payload),
+    to: Orchestrator.Protocol.A2A.Proxy
+
+  defdelegate forward_to_agent(conn, agent_id, agent, adapter, rpc_id, payload),
+    to: Orchestrator.Protocol.A2A.Proxy
 end

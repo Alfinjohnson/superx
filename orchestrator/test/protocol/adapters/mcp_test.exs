@@ -120,13 +120,14 @@ defmodule Orchestrator.Protocol.Adapters.MCPTest do
 
   describe "encode/1" do
     test "encodes envelope to wire format" do
-      envelope = Envelope.new(%{
-        protocol: "mcp",
-        version: "2024-11-05",
-        method: :initialize,
-        payload: %{"protocolVersion" => "2024-11-05"},
-        rpc_id: 123
-      })
+      envelope =
+        Envelope.new(%{
+          protocol: "mcp",
+          version: "2024-11-05",
+          method: :initialize,
+          payload: %{"protocolVersion" => "2024-11-05"},
+          rpc_id: 123
+        })
 
       assert {:ok, wire} = MCPAdapter.encode(envelope)
 
@@ -137,12 +138,13 @@ defmodule Orchestrator.Protocol.Adapters.MCPTest do
     end
 
     test "encodes notification without id" do
-      envelope = Envelope.new(%{
-        protocol: "mcp",
-        version: "2024-11-05",
-        method: :initialized,
-        payload: %{}
-      })
+      envelope =
+        Envelope.new(%{
+          protocol: "mcp",
+          version: "2024-11-05",
+          method: :initialized,
+          payload: %{}
+        })
 
       assert {:ok, wire} = MCPAdapter.encode(envelope)
 
@@ -169,14 +171,23 @@ defmodule Orchestrator.Protocol.Adapters.MCPTest do
     end
 
     test "decodes SSE error event" do
-      data = Jason.encode!(%{"jsonrpc" => "2.0", "error" => %{"code" => -32600, "message" => "Invalid"}})
+      data =
+        Jason.encode!(%{
+          "jsonrpc" => "2.0",
+          "error" => %{"code" => -32600, "message" => "Invalid"}
+        })
 
       assert {:error, error} = MCPAdapter.decode_stream_event(data)
       assert error["code"] == -32600
     end
 
     test "decodes SSE notification" do
-      data = Jason.encode!(%{"jsonrpc" => "2.0", "method" => "notifications/message", "params" => %{"text" => "hello"}})
+      data =
+        Jason.encode!(%{
+          "jsonrpc" => "2.0",
+          "method" => "notifications/message",
+          "params" => %{"text" => "hello"}
+        })
 
       assert {:ok, {:notification, :log_message, params}} = MCPAdapter.decode_stream_event(data)
       assert params["text"] == "hello"
