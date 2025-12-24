@@ -6,6 +6,37 @@ defmodule Orchestrator.Protocol.MCP.SessionTest do
 
   alias Orchestrator.Protocol.MCP.Session
 
+  describe "module" do
+    test "exports expected functions" do
+      # Force module load
+      Code.ensure_loaded!(Session)
+
+      # Get all exported functions
+      functions = Session.__info__(:functions)
+
+      # Verify key functions exist with expected arities
+      assert {:call_tool, 2} in functions
+      assert {:call_tool, 3} in functions
+      assert {:call_tool, 4} in functions
+      assert {:list_tools, 1} in functions
+      assert {:list_tools, 2} in functions
+      assert {:list_resources, 1} in functions
+      assert {:list_resources, 2} in functions
+      assert {:read_resource, 2} in functions
+      assert {:read_resource, 3} in functions
+      assert {:list_prompts, 1} in functions
+      assert {:list_prompts, 2} in functions
+      assert {:get_prompt, 2} in functions
+      assert {:get_prompt, 3} in functions
+      assert {:get_prompt, 4} in functions
+      assert {:request, 2} in functions
+      assert {:request, 3} in functions
+      assert {:request, 4} in functions
+      assert {:start_link, 1} in functions
+      assert {:start_link, 2} in functions
+    end
+  end
+
   describe "start_link/1" do
     test "starts session with required params" do
       params = %{
@@ -24,60 +55,6 @@ defmodule Orchestrator.Protocol.MCP.SessionTest do
         {:ok, pid} -> GenServer.stop(pid)
         _ -> :ok
       end
-    end
-  end
-
-  describe "call_tool/3" do
-    test "sends tool call request" do
-      # Since we can't create a real session without a server,
-      # just verify the function exists
-      assert function_exported?(Session, :call_tool, 2)
-      assert function_exported?(Session, :call_tool, 3)
-      assert function_exported?(Session, :call_tool, 4)
-    end
-  end
-
-  describe "list_tools/2" do
-    test "function exists" do
-      assert function_exported?(Session, :list_tools, 1)
-      assert function_exported?(Session, :list_tools, 2)
-    end
-  end
-
-  describe "list_resources/2" do
-    test "function exists" do
-      assert function_exported?(Session, :list_resources, 1)
-      assert function_exported?(Session, :list_resources, 2)
-    end
-  end
-
-  describe "read_resource/3" do
-    test "function exists" do
-      assert function_exported?(Session, :read_resource, 2)
-      assert function_exported?(Session, :read_resource, 3)
-    end
-  end
-
-  describe "list_prompts/2" do
-    test "function exists" do
-      assert function_exported?(Session, :list_prompts, 1)
-      assert function_exported?(Session, :list_prompts, 2)
-    end
-  end
-
-  describe "get_prompt/4" do
-    test "function exists" do
-      assert function_exported?(Session, :get_prompt, 2)
-      assert function_exported?(Session, :get_prompt, 3)
-      assert function_exported?(Session, :get_prompt, 4)
-    end
-  end
-
-  describe "request/4" do
-    test "sends raw JSON-RPC request" do
-      assert function_exported?(Session, :request, 2)
-      assert function_exported?(Session, :request, 3)
-      assert function_exported?(Session, :request, 4)
     end
   end
 end
