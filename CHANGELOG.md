@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **MCP Protocol Support** - Full implementation of Anthropic's Model Context Protocol (v2024-11-05)
+  - Protocol adapter for MCP JSON-RPC messages
+  - HTTP transport (streamable-http, SSE) for remote MCP servers
+  - STDIO transport for local MCP server processes
+  - Stateful MCP.Session GenServer for connection management
+  - Bidirectional request handling (sampling, roots, elicitation)
+  - Environment variable expansion in agent configuration (`${VAR_NAME}`)
+  - MCP registry file support for bulk server imports
 - **Pure OTP in-memory task management** - Tasks stored via Horde + ETS, no external dependencies
 - **Per-request webhooks** - Pass webhook URL in `metadata.webhook` for ephemeral notifications
 - **SSE streaming integration tests** - Production-grade tests for `message/stream` and `tasks/subscribe`
@@ -77,7 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Developer Experience**
   - Well-documented README with examples
-  - 210+ tests with comprehensive coverage
+  - 230+ tests with comprehensive coverage
   - Factory helpers for testing
   - Stress test suite
 

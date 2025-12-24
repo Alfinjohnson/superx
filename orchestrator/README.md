@@ -134,10 +134,21 @@ lib/orchestrator/
 │   ├── http_client.ex      # ← HTTP calls to agents
 │   ├── push_notifier.ex    # ← Webhook delivery logic
 │   └── sse_client.ex       # ← Streaming responses
-└── protocol/
-    ├── adapters/a2a.ex     # ← A2A protocol (add new protocols here)
-    ├── envelope.ex         # ← Protocol-agnostic message format
-    └── methods.ex          # ← Method definitions & specs
+├── protocol/
+│   ├── adapters/
+│   │   ├── a2a.ex          # ← A2A protocol adapter
+│   │   └── mcp.ex          # ← MCP protocol adapter
+│   ├── envelope.ex         # ← Protocol-agnostic message format
+│   ├── registry.ex         # ← Protocol version registry
+│   └── methods.ex          # ← Method definitions & specs
+└── mcp/                     # ← MCP protocol implementation
+    ├── session.ex          # ← Stateful MCP session GenServer
+    ├── client_handler.ex   # ← Bidirectional request handling
+    ├── supervisor.ex       # ← MCP session supervision
+    └── transport/
+        ├── behaviour.ex    # ← Transport abstraction
+        ├── http.ex         # ← HTTP + SSE transport
+        └── stdio.ex        # ← STDIO transport for local servers
 
 test/
 ├── agent/                  # ← Agent tests
@@ -149,9 +160,10 @@ test/
 
 **What to edit for common tasks:**
 - **New RPC method?** → `router.ex` + `protocol/methods.ex` + tests
-- **New protocol (MCP)?** → `protocol/adapters/` + `router.ex`
+- **New protocol?** → `protocol/adapters/` + `protocol/registry.ex`
 - **Fix routing/circuit breaker?** → `agent/worker.ex`
 - **Add task persistence?** → `task/store.ex`
+- **Add MCP transport?** → `mcp/transport/` + `mcp/transport/behaviour.ex`
 - **New feature?** → Create module in subdirectory + mirror in test/
 
 ## Common Development Tasks
@@ -248,6 +260,10 @@ Orchestrator.Application
 │   ├── Agent.Worker (per-agent GenServer with circuit breaker)
 │   ├── Agent.Worker (per-agent GenServer with circuit breaker)
 │   └── ...
+├── Orchestrator.MCP.Supervisor (MCP session management)
+│   ├── MCP.Session (per-MCP-agent stateful session)
+│   ├── MCP.Session (per-MCP-agent stateful session)
+│   └── ...
 ├── Orchestrator.Infra.PushNotifier (GenServer + async webhook delivery)
 ├── Orchestrator.Infra.HttpClient (Finch connection pool)
 ├── Orchestrator.Infra.Cluster (libcluster auto-discovery)
@@ -263,15 +279,28 @@ Orchestrator.Application
 | **Distributed Registry** | `Horde.Registry` | Track agents across cluster nodes |
 | **Distributed Supervisor** | `Horde.DynamicSupervisor` | Supervise workers across cluster |
 | **ETS Storage** | `Task.Store`, `Agent.Store` | Fast in-memory data access |
+| **Protocol Adapters** | `Protocol.Adapters.*` | Pluggable protocol support (A2A, MCP) |
+| **Transport Abstraction** | `MCP.Transport.Behaviour` | Pluggable MCP transports (HTTP, STDIO) |
+| **Stateful Sessions** | `MCP.Session` | Persistent MCP connections with caching |
 
 ### Request Flow
 
+**A2A Protocol:**
 ```
 HTTP Request → Router → RPC.Router → Handler → Agent.Worker → Remote Agent
      ↓                                              ↓
   Response  ←──────────────────────────────────────┘
      ↓
 Push.Notifier → Webhook (async)
+```
+
+**MCP Protocol:**
+```
+HTTP Request → Router → Handler → Agent.Worker → MCP.Session → Transport → MCP Server
+     ↓                                              ↓
+  Response  ←──────────────────────────────────────┘
+     ↓                                              ↑
+Push.Notifier → Webhook (async)               (HTTP/SSE/STDIO)
 ```
 
 ## Quick Reference

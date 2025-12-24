@@ -45,8 +45,8 @@ If you're managing a single agent or all agents are tightly coupled within one f
                     ─────────────────             ─────────              ──────────────
                     
                     ✅ LangGraph                  ✅ A2A Protocol        ❓ Routing
-                    ✅ AutoGen                    ✅ MCP                 ❓ Load Balancing
-                    ✅ Google ADK                 ✅ Standards            ❓ Backpressure
+                    ✅ AutoGen                    ✅ MCP Protocol        ❓ Load Balancing
+                    ✅ Google ADK                 ✅ Standards           ❓ Backpressure
                     ✅ Custom                                            ❓ Circuit Breakers
                                                                          ❓ Task Persistence
                                                                          ❓ Multi-Agent Coordination
@@ -61,7 +61,7 @@ SuperX acts as an **agentic gateway and orchestrator**, handling infrastructure 
 - **Built-in resilience** — Circuit breakers, backpressure, and graceful degradation
 - **Task persistence** — Track multi-turn conversations and handle failures
 - **Dynamic agent registry** — Register/deregister agents without restarting
-- **Protocol-agnostic** — Start with A2A, add MCP or custom protocols later
+- **Protocol-agnostic** — Supports A2A and MCP protocols, extensible for custom protocols
 
 If AI agents are like **specialized employees**, SuperX is the **shared infrastructure** — routing conversations, managing failures, and keeping work moving when parts of the system slow down or fail.
 
@@ -99,6 +99,7 @@ If AI agents are like **specialized employees**, SuperX is the **shared infrastr
 | **Backpressure** | Per-agent concurrency limits prevent cascade failures |
 | **Dynamic Registry** | Register/deregister agents at runtime without restarts |
 | **A2A Protocol** | Full support for Google's Agent-to-Agent protocol |
+| **MCP Protocol** | Full support for Anthropic's Model Context Protocol (HTTP, SSE, STDIO) |
 | **Per-Request Webhooks** | Ephemeral notifications without pre-configuration |
 | **Push Notifications** | Webhook-based notifications with HMAC, JWT, or token auth |
 | **Horizontal Scaling** | Distribute across Erlang nodes, no external database required |
@@ -141,6 +142,7 @@ SuperX loads agents from a YAML configuration file. Create or modify `agents.yml
 ```yaml
 # samples/agents.yml
 agents:
+  # A2A Protocol Agent
   my_agent:
     url: http://localhost:8001/a2a/my_agent      # A2A RPC endpoint of your agent
     bearer: ""  # Optional: API token for authentication
@@ -155,13 +157,39 @@ agents:
           - id: skill_id
             name: Skill Name
             description: What this skill does
+
+  # MCP Protocol Agent (HTTP transport)
+  exa_search:
+    protocol: mcp
+    protocolVersion: 2024-11-05
+    transport:
+      type: streamable-http
+      url: https://mcp.exa.ai/mcp
+      headers:
+        Authorization: Bearer ${EXA_API_KEY}
+
+  # MCP Protocol Agent (STDIO transport for local tools)
+  local_filesystem:
+    protocol: mcp
+    transport:
+      type: stdio
+      command: npx
+      args:
+        - "-y"
+        - "@modelcontextprotocol/server-filesystem"
+        - "/home/user/documents"
 ```
 
 **URL Configuration:**
 - `url`: The A2A JSON-RPC endpoint of your agent server (e.g., `http://host:port/a2a/agent_name`)
 - `agentCard.url`: The agent card discovery endpoint (typically `{agent_url}/.well-known/agent-card.json`)
 
-> **Note:** You need an A2A-compatible agent server running at the specified URL. See the [Google A2A Python samples](https://github.com/google/A2A/tree/main/samples/python) to learn how to build an agent.
+**MCP Transport Types:**
+- `streamable-http`: HTTP POST with streaming responses (recommended)
+- `sse`: Server-Sent Events for legacy MCP servers
+- `stdio`: Standard I/O for local MCP server processes
+
+> **Note:** For A2A agents, you need an A2A-compatible agent server running at the specified URL. See the [Google A2A Python samples](https://github.com/google/A2A/tree/main/samples/python). For MCP servers, see the [MCP Server Registry](https://github.com/modelcontextprotocol/servers).
 
 Set the `SUPERX_AGENTS_FILE` environment variable to load your agents:
 
@@ -383,8 +411,8 @@ superx/
 ├── orchestrator/           # Main Elixir application
 │   ├── lib/               # Source code
 │   │   └── orchestrator/  # Core modules
-│   └── test/              # Test suite (210+ tests)
-├── docs/                  # A2A protocol documentation
+│   └── test/              # Test suite (230+ tests)
+├── docs/                  # Protocol documentation
 │   └── a2a-v030/         # A2A v0.3.0 specification
 ├── samples/              # Sample configurations
 │   └── agents.yml        # Example agent configuration
@@ -408,10 +436,13 @@ superx/
 
 ### Protocol Specification
 
-- **[A2A Protocol](https://github.com/google/A2A)** - Google's Agent-to-Agent protocol specification
-- **[A2A Documentation](https://google.github.io/A2A/)** - Official protocol documentation
-- **[A2A Python Samples](https://github.com/google/A2A/tree/main/samples/python)** - Example agent implementations
-- **[A2A v0.3.0 Spec](docs/a2a-v030/specification.md)** - Local copy of A2A specification
+- **[A2A Protocol](https://github.com/google/A2A)** — Google's Agent-to-Agent protocol specification
+- **[A2A Documentation](https://google.github.io/A2A/)** — Official protocol documentation
+- **[A2A Python Samples](https://github.com/google/A2A/tree/main/samples/python)** — Example agent implementations
+- **[A2A v0.3.0 Spec](docs/a2a-v030/specification.md)** — Local copy of A2A specification
+- **[MCP Protocol](https://modelcontextprotocol.io/)** — Anthropic's Model Context Protocol
+- **[MCP Specification](https://spec.modelcontextprotocol.io/)** — Official MCP specification
+- **[MCP Server Registry](https://github.com/modelcontextprotocol/servers)** — Pre-built MCP servers
 
 ## Tech Stack
 
@@ -424,7 +455,7 @@ Built with **Elixir and OTP** — designed for exactly what we need: long-runnin
 | **Distributed State** | Horde (distributed registry, supervisor) |
 | **Clustering** | libcluster (gossip, DNS, Kubernetes) |
 | **Container** | Docker (multi-stage build, ~65MB image) |
-| **Testing** | ExUnit (210+ tests) |
+| **Testing** | ExUnit (230+ tests) |
 
 ## Contributing
 

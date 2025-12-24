@@ -14,7 +14,7 @@ SuperX is an experimental A2A Protocol gateway with:
 - Circuit breaker and backpressure patterns
 - Push notifications with HMAC/JWT/Token auth
 - Erlang clustering support (gossip, DNS, Kubernetes)
-- 210+ tests with comprehensive coverage
+- 230+ tests with comprehensive coverage
 
 ---
 

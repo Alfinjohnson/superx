@@ -235,7 +235,7 @@ defmodule Orchestrator.Agent.Worker do
       {:ok, session} ->
         # Map envelope method to MCP operation
         result = dispatch_mcp_method(session, env)
-        
+
         case result do
           {:ok, _} = success ->
             emit_telemetry(:call_stop, state, env, %{status: 200})
