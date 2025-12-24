@@ -1,4 +1,4 @@
-defmodule Orchestrator.MCP.Session do
+defmodule Orchestrator.Protocol.MCP.Session do
   @moduledoc """
   Stateful MCP session manager.
 
@@ -40,8 +40,8 @@ defmodule Orchestrator.MCP.Session do
 
   require Logger
 
-  alias Orchestrator.MCP.Transport.Behaviour, as: Transport
-  alias Orchestrator.Protocol.Adapters.MCP, as: MCPAdapter
+  alias Orchestrator.Protocol.MCP.Transport.Behaviour, as: Transport
+  alias Orchestrator.Protocol.MCP.Adapter, as: MCPAdapter
   alias Orchestrator.Utils
 
   # Telemetry event prefix
@@ -768,4 +768,20 @@ defmodule Orchestrator.MCP.Session do
   end
 
   defp emit_request_telemetry(_meta, _state, _result), do: :ok
+end
+
+# Backward compatibility alias
+defmodule Orchestrator.MCP.Session do
+  @moduledoc false
+  defdelegate start_link(server_config, opts \\ []), to: Orchestrator.Protocol.MCP.Session
+  defdelegate call_tool(session, tool_name, arguments \\ %{}, timeout \\ 30_000), to: Orchestrator.Protocol.MCP.Session
+  defdelegate list_tools(session, timeout \\ 30_000), to: Orchestrator.Protocol.MCP.Session
+  defdelegate read_resource(session, uri, timeout \\ 30_000), to: Orchestrator.Protocol.MCP.Session
+  defdelegate list_resources(session, timeout \\ 30_000), to: Orchestrator.Protocol.MCP.Session
+  defdelegate get_prompt(session, prompt_name, arguments \\ %{}, timeout \\ 30_000), to: Orchestrator.Protocol.MCP.Session
+  defdelegate list_prompts(session, timeout \\ 30_000), to: Orchestrator.Protocol.MCP.Session
+  defdelegate request(session, method, params \\ %{}, timeout \\ 30_000), to: Orchestrator.Protocol.MCP.Session
+  defdelegate info(session), to: Orchestrator.Protocol.MCP.Session
+  defdelegate get_agent_card(session), to: Orchestrator.Protocol.MCP.Session
+  defdelegate close(session), to: Orchestrator.Protocol.MCP.Session
 end

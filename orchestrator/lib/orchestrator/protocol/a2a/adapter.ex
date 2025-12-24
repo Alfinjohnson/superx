@@ -1,4 +1,4 @@
-defmodule Orchestrator.Protocol.Adapters.A2A do
+defmodule Orchestrator.Protocol.A2A.Adapter do
   @moduledoc """
   A2A protocol adapter for version 0.3.0.
 
@@ -273,21 +273,37 @@ defmodule Orchestrator.Protocol.Adapters.A2A do
   defp get_in_payload(%Envelope{payload: p}, key), do: Map.get(p, key)
 end
 
-# Backward compatibility alias - DEPRECATED
+# Backward compatibility aliases
+defmodule Orchestrator.Protocol.Adapters.A2A do
+  @moduledoc false
+  defdelegate protocol_name(), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate protocol_version(), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate normalize_method(m), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate wire_method(m), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate encode(e), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate decode(w), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate decode_stream_event(d), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate well_known_path(), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate resolve_card_url(a), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate normalize_agent_card(c), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate valid_card?(c), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate build_request(e), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate parse_response(r), to: Orchestrator.Protocol.A2A.Adapter
+end
+
 defmodule Orchestrator.Protocol.A2A do
   @moduledoc false
-  # Delegate to new location
-  defdelegate protocol_name(), to: Orchestrator.Protocol.Adapters.A2A
-  defdelegate protocol_version(), to: Orchestrator.Protocol.Adapters.A2A
-  defdelegate normalize_method(m), to: Orchestrator.Protocol.Adapters.A2A
-  defdelegate wire_method(m), to: Orchestrator.Protocol.Adapters.A2A
-  defdelegate encode(e), to: Orchestrator.Protocol.Adapters.A2A
-  defdelegate decode(w), to: Orchestrator.Protocol.Adapters.A2A
-  defdelegate decode_stream_event(d), to: Orchestrator.Protocol.Adapters.A2A
-  defdelegate well_known_path(), to: Orchestrator.Protocol.Adapters.A2A
-  defdelegate resolve_card_url(a), to: Orchestrator.Protocol.Adapters.A2A
-  defdelegate normalize_agent_card(c), to: Orchestrator.Protocol.Adapters.A2A
-  defdelegate valid_card?(c), to: Orchestrator.Protocol.Adapters.A2A
-  defdelegate build_request(e), to: Orchestrator.Protocol.Adapters.A2A
-  defdelegate parse_response(r), to: Orchestrator.Protocol.Adapters.A2A
+  defdelegate protocol_name(), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate protocol_version(), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate normalize_method(m), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate wire_method(m), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate encode(e), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate decode(w), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate decode_stream_event(d), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate well_known_path(), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate resolve_card_url(a), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate normalize_agent_card(c), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate valid_card?(c), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate build_request(e), to: Orchestrator.Protocol.A2A.Adapter
+  defdelegate parse_response(r), to: Orchestrator.Protocol.A2A.Adapter
 end

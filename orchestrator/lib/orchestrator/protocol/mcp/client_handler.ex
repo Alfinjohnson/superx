@@ -1,4 +1,4 @@
-defmodule Orchestrator.MCP.ClientHandler do
+defmodule Orchestrator.Protocol.MCP.ClientHandler do
   @moduledoc """
   Handles bidirectional MCP requests (server → client).
 
@@ -31,7 +31,7 @@ defmodule Orchestrator.MCP.ClientHandler do
   Configure the LLM provider for sampling requests:
 
   ```elixir
-  config :orchestrator, Orchestrator.MCP.ClientHandler,
+  config :orchestrator, Orchestrator.Protocol.MCP.ClientHandler,
     sampling_provider: :openai,
     sampling_model: "gpt-4",
     sampling_api_key: System.get_env("OPENAI_API_KEY")
@@ -460,4 +460,14 @@ defmodule Orchestrator.MCP.ClientHandler do
       %{provider: provider, status: status}
     )
   end
+end
+
+# Backward compatibility alias
+defmodule Orchestrator.MCP.ClientHandler do
+  @moduledoc false
+  defdelegate start_link(opts), to: Orchestrator.Protocol.MCP.ClientHandler
+  defdelegate set_roots(handler, roots), to: Orchestrator.Protocol.MCP.ClientHandler
+  defdelegate get_roots(handler), to: Orchestrator.Protocol.MCP.ClientHandler
+  defdelegate configure_sampling(handler, config), to: Orchestrator.Protocol.MCP.ClientHandler
+  defdelegate set_elicitation_handler(handler, fun), to: Orchestrator.Protocol.MCP.ClientHandler
 end

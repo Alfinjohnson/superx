@@ -1,4 +1,4 @@
-defmodule Orchestrator.MCP.Transport.Behaviour do
+defmodule Orchestrator.Protocol.MCP.Transport.Behaviour do
   @moduledoc """
   Behaviour for MCP transport implementations.
 
@@ -111,18 +111,18 @@ defmodule Orchestrator.MCP.Transport.Behaviour do
   # Helper Functions
   # -------------------------------------------------------------------
 
-  alias Orchestrator.MCP.Transport.Docker
+  alias Orchestrator.Protocol.MCP.Transport.Docker
 
   @doc """
   Build a transport module from config type.
   """
   @spec transport_module(atom() | String.t()) :: module()
-  def transport_module(:http), do: Orchestrator.MCP.Transport.HTTP
-  def transport_module(:sse), do: Orchestrator.MCP.Transport.HTTP
-  def transport_module("streamable-http"), do: Orchestrator.MCP.Transport.HTTP
-  def transport_module("sse"), do: Orchestrator.MCP.Transport.HTTP
-  def transport_module(:stdio), do: Orchestrator.MCP.Transport.STDIO
-  def transport_module("stdio"), do: Orchestrator.MCP.Transport.STDIO
+  def transport_module(:http), do: Orchestrator.Protocol.MCP.Transport.HTTP
+  def transport_module(:sse), do: Orchestrator.Protocol.MCP.Transport.HTTP
+  def transport_module("streamable-http"), do: Orchestrator.Protocol.MCP.Transport.HTTP
+  def transport_module("sse"), do: Orchestrator.Protocol.MCP.Transport.HTTP
+  def transport_module(:stdio), do: Orchestrator.Protocol.MCP.Transport.STDIO
+  def transport_module("stdio"), do: Orchestrator.Protocol.MCP.Transport.STDIO
 
   @doc """
   Parse transport config from agent configuration.
@@ -207,4 +207,12 @@ defmodule Orchestrator.MCP.Transport.Behaviour do
   end
 
   defp build_headers(_), do: %{}
+end
+
+# Backward compatibility alias
+defmodule Orchestrator.MCP.Transport.Behaviour do
+  @moduledoc false
+  defdelegate transport_module(type), to: Orchestrator.Protocol.MCP.Transport.Behaviour
+  defdelegate parse_config(config), to: Orchestrator.Protocol.MCP.Transport.Behaviour
+  defdelegate parse_config!(config), to: Orchestrator.Protocol.MCP.Transport.Behaviour
 end

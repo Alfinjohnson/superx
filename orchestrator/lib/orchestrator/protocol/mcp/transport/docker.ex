@@ -1,4 +1,4 @@
-defmodule Orchestrator.MCP.Transport.Docker do
+defmodule Orchestrator.Protocol.MCP.Transport.Docker do
   @moduledoc """
   Docker/OCI support for MCP STDIO transport.
 
@@ -282,4 +282,20 @@ defmodule Orchestrator.MCP.Transport.Docker do
         {:error, {:inspect_failed, code, output}}
     end
   end
+end
+
+# Backward compatibility alias
+defmodule Orchestrator.MCP.Transport.Docker do
+  @moduledoc false
+  defdelegate oci_package?(config), to: Orchestrator.Protocol.MCP.Transport.Docker
+  defdelegate prepare_transport(config), to: Orchestrator.Protocol.MCP.Transport.Docker
+  defdelegate ensure_docker_available(), to: Orchestrator.Protocol.MCP.Transport.Docker
+  defdelegate ensure_image_available(image_name), to: Orchestrator.Protocol.MCP.Transport.Docker
+  defdelegate image_exists?(image_name), to: Orchestrator.Protocol.MCP.Transport.Docker
+  defdelegate pull_image(image_name), to: Orchestrator.Protocol.MCP.Transport.Docker
+  defdelegate build_stdio_config(image_name, original_config), to: Orchestrator.Protocol.MCP.Transport.Docker
+  defdelegate build_docker_args(image_name, env, config), to: Orchestrator.Protocol.MCP.Transport.Docker
+  defdelegate list_mcp_images(), to: Orchestrator.Protocol.MCP.Transport.Docker
+  defdelegate remove_image(image_name), to: Orchestrator.Protocol.MCP.Transport.Docker
+  defdelegate inspect_image(image_name), to: Orchestrator.Protocol.MCP.Transport.Docker
 end

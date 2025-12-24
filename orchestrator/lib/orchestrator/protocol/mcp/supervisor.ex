@@ -1,4 +1,4 @@
-defmodule Orchestrator.MCP.Supervisor do
+defmodule Orchestrator.Protocol.MCP.Supervisor do
   @moduledoc """
   Supervisor for MCP sessions and related processes.
 
@@ -40,7 +40,7 @@ defmodule Orchestrator.MCP.Supervisor do
         {:ok, pid}
 
       :error ->
-        spec = {Orchestrator.MCP.Session, server_config}
+        spec = {Orchestrator.Protocol.MCP.Session, server_config}
 
         case DynamicSupervisor.start_child(Orchestrator.MCP.SessionSupervisor, spec) do
           {:ok, pid} -> {:ok, pid}
@@ -83,4 +83,24 @@ defmodule Orchestrator.MCP.Supervisor do
     Registry.select(Orchestrator.MCP.SessionRegistry, [{{:"$1", :"$2", :_}, [], [{{:"$1", :"$2"}}]}])
     |> Enum.map(fn {server_id, pid} -> %{server_id: server_id, pid: pid} end)
   end
+end
+
+# Backward compatibility alias
+defmodule Orchestrator.MCP.Supervisor do
+  @moduledoc false
+  use Supervisor
+
+  def start_link(opts) do
+    Orchestrator.Protocol.MCP.Supervisor.start_link(opts)
+  end
+
+  @impl true
+  def init(opts) do
+    Orchestrator.Protocol.MCP.Supervisor.init(opts)
+  end
+
+  defdelegate start_session(server_config), to: Orchestrator.Protocol.MCP.Supervisor
+  defdelegate stop_session(server_id), to: Orchestrator.Protocol.MCP.Supervisor
+  defdelegate lookup_session(server_id), to: Orchestrator.Protocol.MCP.Supervisor
+  defdelegate list_sessions(), to: Orchestrator.Protocol.MCP.Supervisor
 end

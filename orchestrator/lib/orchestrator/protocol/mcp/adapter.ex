@@ -1,4 +1,4 @@
-defmodule Orchestrator.Protocol.Adapters.MCP do
+defmodule Orchestrator.Protocol.MCP.Adapter do
   @moduledoc """
   MCP (Model Context Protocol) adapter for version 2024-11-05.
 
@@ -389,4 +389,23 @@ defmodule Orchestrator.Protocol.Adapters.MCP do
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)
     |> Map.new()
   end
+end
+
+# Backward compatibility alias
+defmodule Orchestrator.Protocol.Adapters.MCP do
+  @moduledoc false
+  defdelegate protocol_name(), to: Orchestrator.Protocol.MCP.Adapter
+  defdelegate protocol_version(), to: Orchestrator.Protocol.MCP.Adapter
+  defdelegate normalize_method(wire_method), to: Orchestrator.Protocol.MCP.Adapter
+  defdelegate wire_method(canonical), to: Orchestrator.Protocol.MCP.Adapter
+  defdelegate encode(env), to: Orchestrator.Protocol.MCP.Adapter
+  defdelegate decode(wire), to: Orchestrator.Protocol.MCP.Adapter
+  defdelegate decode_stream_event(data), to: Orchestrator.Protocol.MCP.Adapter
+  defdelegate build_initialize_request(opts \\ %{}), to: Orchestrator.Protocol.MCP.Adapter
+  defdelegate build_client_capabilities(opts \\ %{}), to: Orchestrator.Protocol.MCP.Adapter
+  defdelegate parse_server_capabilities(result), to: Orchestrator.Protocol.MCP.Adapter
+  defdelegate build_tool_call(tool_name, arguments, id \\ nil), to: Orchestrator.Protocol.MCP.Adapter
+  defdelegate build_resource_read(uri, id \\ nil), to: Orchestrator.Protocol.MCP.Adapter
+  defdelegate notification?(method), to: Orchestrator.Protocol.MCP.Adapter
+  defdelegate server_request?(method), to: Orchestrator.Protocol.MCP.Adapter
 end

@@ -1,4 +1,4 @@
-defmodule Orchestrator.Web.Proxy do
+defmodule Orchestrator.Protocol.A2A.Proxy do
   @moduledoc """
   Handles A2A proxy requests to agents through the orchestrator.
 
@@ -115,4 +115,11 @@ defmodule Orchestrator.Web.Proxy do
         RpcErrors.send_error(conn, rpc_id, RpcErrors.code(:remote_error), "Failed to reach agent")
     end
   end
+end
+
+# Backward compatibility alias
+defmodule Orchestrator.Web.Proxy do
+  @moduledoc false
+  defdelegate handle_request(conn, agent_id, rpc_id, wire_method, payload), to: Orchestrator.Protocol.A2A.Proxy
+  defdelegate forward_to_agent(conn, agent_id, agent, adapter, rpc_id, payload), to: Orchestrator.Protocol.A2A.Proxy
 end

@@ -1,4 +1,4 @@
-defmodule Orchestrator.MCP.Transport.HTTP do
+defmodule Orchestrator.Protocol.MCP.Transport.HTTP do
   @moduledoc """
   HTTP transport for MCP protocol.
 
@@ -34,7 +34,7 @@ defmodule Orchestrator.MCP.Transport.HTTP do
   - Custom headers (X-API-Key, etc.)
   """
 
-  @behaviour Orchestrator.MCP.Transport.Behaviour
+  @behaviour Orchestrator.Protocol.MCP.Transport.Behaviour
 
   require Logger
 
@@ -288,4 +288,17 @@ defmodule Orchestrator.MCP.Transport.HTTP do
 
   defp ensure_id(%{"id" => _} = message), do: message
   defp ensure_id(message), do: Map.put(message, "id", Utils.new_id())
+end
+
+# Backward compatibility alias
+defmodule Orchestrator.MCP.Transport.HTTP do
+  @moduledoc false
+  defdelegate connect(config), to: Orchestrator.Protocol.MCP.Transport.HTTP
+  defdelegate send_message(state, message), to: Orchestrator.Protocol.MCP.Transport.HTTP
+  defdelegate request(state, message, timeout), to: Orchestrator.Protocol.MCP.Transport.HTTP
+  defdelegate start_streaming(state, receiver_pid), to: Orchestrator.Protocol.MCP.Transport.HTTP
+  defdelegate stop_streaming(state), to: Orchestrator.Protocol.MCP.Transport.HTTP
+  defdelegate close(state), to: Orchestrator.Protocol.MCP.Transport.HTTP
+  defdelegate connected?(state), to: Orchestrator.Protocol.MCP.Transport.HTTP
+  defdelegate info(state), to: Orchestrator.Protocol.MCP.Transport.HTTP
 end

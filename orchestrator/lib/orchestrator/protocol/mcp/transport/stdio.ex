@@ -1,4 +1,4 @@
-defmodule Orchestrator.MCP.Transport.STDIO do
+defmodule Orchestrator.Protocol.MCP.Transport.STDIO do
   @moduledoc """
   STDIO transport for MCP protocol.
 
@@ -49,7 +49,7 @@ defmodule Orchestrator.MCP.Transport.STDIO do
   ```
   """
 
-  @behaviour Orchestrator.MCP.Transport.Behaviour
+  @behaviour Orchestrator.Protocol.MCP.Transport.Behaviour
 
   require Logger
 
@@ -385,4 +385,17 @@ defmodule Orchestrator.MCP.Transport.STDIO do
       }
     )
   end
+end
+
+# Backward compatibility alias
+defmodule Orchestrator.MCP.Transport.STDIO do
+  @moduledoc false
+  defdelegate connect(config), to: Orchestrator.Protocol.MCP.Transport.STDIO
+  defdelegate send_message(state, message), to: Orchestrator.Protocol.MCP.Transport.STDIO
+  defdelegate request(state, message, timeout), to: Orchestrator.Protocol.MCP.Transport.STDIO
+  defdelegate start_streaming(state, receiver_pid), to: Orchestrator.Protocol.MCP.Transport.STDIO
+  defdelegate stop_streaming(state), to: Orchestrator.Protocol.MCP.Transport.STDIO
+  defdelegate close(state), to: Orchestrator.Protocol.MCP.Transport.STDIO
+  defdelegate connected?(state), to: Orchestrator.Protocol.MCP.Transport.STDIO
+  defdelegate info(state), to: Orchestrator.Protocol.MCP.Transport.STDIO
 end

@@ -1,4 +1,4 @@
-defmodule Orchestrator.Infra.PushNotifier do
+defmodule Orchestrator.Protocol.A2A.PushNotifier do
   @moduledoc """
   Webhook dispatcher for push notifications with retry/backoff.
 
@@ -239,8 +239,13 @@ defmodule Orchestrator.Infra.PushNotifier do
   end
 end
 
-# Backward compatibility alias
+# Backward compatibility aliases
+defmodule Orchestrator.Infra.PushNotifier do
+  @moduledoc false
+  defdelegate deliver(payload, cfg), to: Orchestrator.Protocol.A2A.PushNotifier
+end
+
 defmodule Orchestrator.PushNotifier do
   @moduledoc false
-  defdelegate deliver(payload, cfg), to: Orchestrator.Infra.PushNotifier
+  defdelegate deliver(payload, cfg), to: Orchestrator.Protocol.A2A.PushNotifier
 end
