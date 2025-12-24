@@ -1,37 +1,108 @@
 # SuperX - Agentic Gateway Orchestrator
 
 <p align="center">
-  <strong>A high-performance gateway + orchestrator for AI agents with support for the A2A Protocol and more</strong>
+  <strong>Open-source infrastructure for multi-agent systems at scale</strong>
 </p>
 
 <p align="center">
+  <a href="#when-do-you-need-superx">When to Use</a> •
+  <a href="#the-gap-superx-fills">Why SuperX</a> •
   <a href="#features">Features</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#architecture">Architecture</a> •
-  <a href="#deployment">Deployment</a> •
   <a href="#documentation">Documentation</a>
 </p>
 
 ---
 
-SuperX is an **experimental Agentic Gateway Orchestrator** that helps AI agents connect and communicate through a unified gateway. Currently supporting the [Agent-to-Agent (A2A) Protocol](https://github.com/google/A2A), with plans to add support for additional protocols in the future. It serves as a central hub for routing messages between AI agents, managing their lifecycles, and maintaining state across conversations.
+## 🚀 Introducing SuperX (v0.1.0-alpha)
+
+Agentic frameworks like Google ADK, LangGraph, and AutoGen already help developers design complex agent workflows, manage sessions, and add observability. They make it much easier to build and reason about multi-agent systems *within a given stack*.
+
+But as systems scale, teams often need a **shared infrastructure layer** that sits *between* agents — especially when agents are built using different frameworks, deployed independently, or scaled separately.
+
+Google's [A2A Protocol](https://github.com/google/A2A) and Anthropic's MCP define common standards for how agents communicate and exchange context. But **protocols alone don't handle runtime concerns**: routing, backpressure, resilience, persistence, or real-time coordination.
+
+**That's the gap SuperX is exploring.**
+
+## When Do You Need SuperX?
+
+You're a good fit for SuperX if:
+
+- ✅ You have **multiple AI agents** (2+) that need to work together
+- ✅ Agents are **built with different frameworks** (LangGraph, AutoGen, custom, etc.)
+- ✅ Agents are **deployed independently** or scaled separately
+- ✅ You need **real-time visibility** into agent workflows and failures
+- ✅ You want **resilience built-in** — circuit breakers, backpressure, task persistence
+- ✅ You need **dynamic routing** — not hardcoded which agent handles what
+
+If you're managing a single agent or all agents are tightly coupled within one framework, you don't need SuperX yet.
+
+## The Gap SuperX Fills
+
+```
+                    Agent Frameworks              Protocols              Infrastructure
+                    ─────────────────             ─────────              ──────────────
+                    
+                    ✅ LangGraph                  ✅ A2A Protocol        ❓ Routing
+                    ✅ AutoGen                    ✅ MCP                 ❓ Load Balancing
+                    ✅ Google ADK                 ✅ Standards            ❓ Backpressure
+                    ✅ Custom                                            ❓ Circuit Breakers
+                                                                         ❓ Task Persistence
+                                                                         ❓ Multi-Agent Coordination
+                                                                         
+                                           SuperX fills this gap ↑
+```
+
+SuperX acts as an **agentic gateway and orchestrator**, handling infrastructure concerns outside the agent logic itself:
+
+- **Intelligent routing** — Route messages to agents based on skills, availability, and load
+- **Real-time streaming** — Observe agent progress as it happens via Server-Sent Events
+- **Built-in resilience** — Circuit breakers, backpressure, and graceful degradation
+- **Task persistence** — Track multi-turn conversations and handle failures
+- **Dynamic agent registry** — Register/deregister agents without restarting
+- **Protocol-agnostic** — Start with A2A, add MCP or custom protocols later
+
+If AI agents are like **specialized employees**, SuperX is the **shared infrastructure** — routing conversations, managing failures, and keeping work moving when parts of the system slow down or fail.
+
+## The Solution
+
+```
+┌─────────────┐      ┌─────────────────────────────────────┐      ┌─────────────┐
+│             │      │            SUPERX                   │      │   Agent A   │
+│   Your App  │ ───► │  • Routing      • Load Balancing   │ ───► │   Agent B   │
+│             │      │  • Failover     • Monitoring       │      │   Agent C   │
+└─────────────┘      └─────────────────────────────────────┘      └─────────────┘
+                              One endpoint.                        Many agents.
+                              Any protocol.                        Hidden complexity.
+```
+
+| Concern | Manual | With SuperX |
+|---------|--------|------------|
+| Adding a new agent | Update all client code | Register once, available everywhere |
+| Agent goes down | Client apps fail | Automatic failover with circuit breaker |
+| Which agent to use? | Hardcoded in client | Smart routing based on skills/load |
+| Multi-turn conversations | Manage state yourself | Task manager handles it |
+| Agent overload | Manual backpressure logic | Built-in per-agent concurrency limits |
+| Monitor health | Build custom dashboards | Observability-first design (Phase 4+) |
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| **A2A Protocol Support** | Full support for Google's Agent-to-Agent protocol (more protocols coming soon) |
-| **In-Memory Task Management** | OTP-distributed task storage via Horde – zero external dependencies |
-| **Intelligent Routing** | Route messages to agents based on skills, availability, and load |
-| **Task Management** | Create, track, and manage tasks across the cluster |
-| **Streaming** | Real-time message streaming via Server-Sent Events (SSE) |
-| **Per-Request Webhooks** | Pass webhook URLs in requests for ephemeral notifications |
+### Infrastructure Concerns Handled
+
+| Feature | Why It Matters |
+|---------|----------------|
+| **Intelligent Routing** | Route messages based on agent skills and load, not hardcoded endpoints |
+| **Real-Time Streaming** | Watch agent work in progress via Server-Sent Events (SSE) |
+| **Task Management** | Persist multi-turn conversations; resume after agent failures |
+| **Circuit Breaker** | Detect failing agents, fail fast, recover gracefully |
+| **Backpressure** | Per-agent concurrency limits prevent cascade failures |
+| **Dynamic Registry** | Register/deregister agents at runtime without restarts |
+| **A2A Protocol** | Full support for Google's Agent-to-Agent protocol |
+| **Per-Request Webhooks** | Ephemeral notifications without pre-configuration |
 | **Push Notifications** | Webhook-based notifications with HMAC, JWT, or token auth |
-| **Agent Registry** | Dynamic agent registration and discovery |
-| **Circuit Breaker** | Automatic failure detection with configurable thresholds |
-| **Backpressure** | Per-agent concurrency limits prevent overload |
-| **Horizontal Scaling** | OTP-distributed in-memory storage scales horizontally |
-| **Clustering** | Erlang node clustering via gossip, DNS, or Kubernetes |
+| **Horizontal Scaling** | Distribute across Erlang nodes, no external database required |
+| **Clustering** | Auto-discovery via gossip, DNS, or Kubernetes |
 
 ## Quick Start
 
@@ -200,16 +271,17 @@ curl -X POST http://localhost:4000/rpc \
 
 ### Storage
 
-SuperX uses **OTP-distributed in-memory storage** via Horde. Tasks are automatically replicated across cluster nodes.
+SuperX uses **OTP-distributed in-memory storage** via Horde. No external database required to start.
 
-| Feature | Description |
-|---------|-------------|
-| **Zero Dependencies** | No external database required |
-| **Distributed** | Tasks replicated across cluster nodes |
-| **Low Latency** | In-memory access, no DB queries |
-| **Ephemeral** | Tasks lost on full cluster restart |
+| Aspect | Details |
+|--------|---------|
+| **Zero External Dependencies** | Start immediately, no PostgreSQL/Redis setup |
+| **Distributed by Default** | Tasks replicated across cluster nodes via OTP |
+| **Low Latency** | In-memory access, microsecond response times |
+| **Ephemeral** | Tasks lost on full cluster restart (acceptable for stateless agent workflows) |
+| **Scale Up** | Add more Erlang nodes to the cluster horizontally |
 
-> **Note:** For audit/compliance requiring persistent storage, consider forwarding task events to your own data store via webhooks.
+> **Note:** For audit/compliance requiring persistent storage, forward task events to your own data store via webhooks. (Full database persistence coming in Phase 4+.)
 
 ### Docker
 
@@ -326,6 +398,7 @@ superx/
 - **[Quick Start](#quick-start)** - Get running in minutes
 - **[Architecture](#architecture)** - System design overview
 - **[Deployment](#deployment)** - Production deployment guide
+- **[Roadmap](docs/roadmap.md)** - Future development plans
 
 ### Developer Documentation
 
@@ -342,13 +415,16 @@ superx/
 
 ## Tech Stack
 
+Built with **Elixir and OTP** — designed for exactly what we need: long-running, fault-tolerant, highly concurrent agent workflows. Reliability is a first-class concern, not an afterthought.
+
 | Component | Technology |
 |-----------|------------|
-| **Runtime** | Elixir 1.19+ / OTP 28+ |
-| **HTTP Server** | Bandit |
-| **Distribution** | Horde (distributed registry/supervisor) |
-| **Clustering** | libcluster |
-| **Container** | Docker (multi-stage build) |
+| **Runtime** | Elixir 1.19+ / OTP 28+ (lightweight, concurrent, distributed) |
+| **HTTP Server** | Bandit (fast, Plug-compatible, streaming support) |
+| **Distributed State** | Horde (distributed registry, supervisor) |
+| **Clustering** | libcluster (gossip, DNS, Kubernetes) |
+| **Container** | Docker (multi-stage build, ~65MB image) |
+| **Testing** | ExUnit (210+ tests) |
 
 ## Contributing
 
