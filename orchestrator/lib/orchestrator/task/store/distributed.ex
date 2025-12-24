@@ -42,7 +42,12 @@ defmodule Orchestrator.Task.Store.Distributed do
     nodes_with_self()
     |> Enum.find_value(fn node ->
       case safe_rpc(node, :get_local, [task_id]) do
-        {:ok, task} -> task
+        {:ok, task} ->
+          case task do
+            nil -> nil
+            %{} = t -> Map.put(t, "id", Map.get(t, "id") || task_id)
+            other -> other
+          end
         _ -> nil
       end
     end)

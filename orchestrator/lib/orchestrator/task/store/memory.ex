@@ -32,7 +32,11 @@ defmodule Orchestrator.Task.Store.Memory do
   @spec get(String.t()) :: map() | nil
   def get(task_id) do
     case :ets.lookup(@table, task_id) do
-      [{^task_id, task}] -> task
+      [{^task_id, task}] ->
+        case task do
+          %{} = t -> Map.put(t, "id", Map.get(t, "id") || task_id)
+          other -> other
+        end
       [] -> nil
     end
   end

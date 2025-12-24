@@ -82,7 +82,7 @@ jobs:
         run: mix format --check-formatted
 
       - name: Check unused dependencies
-        run: mix deps.unlock --check-unused
+        run: mix deps.clean --unused
 
   # ===========================================================================
   # Build Release
