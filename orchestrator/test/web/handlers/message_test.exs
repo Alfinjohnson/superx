@@ -63,23 +63,6 @@ defmodule Orchestrator.Web.Handlers.MessageTest do
       # Could be -32001 (remote error) or other error codes
       assert is_integer(response["error"]["code"])
     end
-
-    @tag :skip
-    test "sends message to agent successfully", %{agent_id: agent_id} do
-      # This test requires a real agent running
-      request = %{
-        "jsonrpc" => "2.0",
-        "id" => "1",
-        "method" => "message.send",
-        "params" => %{
-          "agentId" => agent_id,
-          "message" => %{"role" => "user", "parts" => [%{"text" => "Hello"}]}
-        }
-      }
-
-      conn = json_post("/rpc", request)
-      assert conn.status == 200
-    end
   end
 
   describe "message.stream" do
