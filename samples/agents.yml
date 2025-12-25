@@ -4,13 +4,13 @@ agents:
   # =============================================================================
   check_prime_agent:
     version: 1.0.0
-    url: http://host.docker.internal:8001/a2a/check_prime_agent
+    url: http://localhost:8001/a2a/check_prime_agent
     bearer: ""
     protocol: a2a
     protocolVersion: 0.3.0
     metadata:
       agentCard:
-        url: "http://host.docker.internal:8001/a2a/check_prime_agent/.well-known/agent-card.json"
+        url: "http://localhost:8001/a2a/check_prime_agent/.well-known/agent-card.json"
         name: check_prime_agent
         version: "1.0.0"
         description: An agent specialized in checking whether numbers are prime. It can efficiently determine the primality of individual numbers or lists of numbers.
@@ -27,6 +27,17 @@ agents:
               - math
               - prime
               - numbers
+  # Your FastMCP SSE server (local Python)
+  file_system_assistant:
+    name: Filesystem Server
+    protocol: mcp
+    protocolVersion: 2024-11-05
+    url: http://localhost:3000
+    transport:
+      type: sse
+      url: http://localhost:3000/messages
+    metadata:
+      description: Local filesystem tools exposed via MCP (FastMCP)
 
   # =============================================================================
   # MCP Protocol Agents (Model Context Protocol)

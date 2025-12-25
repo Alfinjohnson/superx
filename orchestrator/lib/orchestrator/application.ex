@@ -7,6 +7,9 @@ defmodule Orchestrator.Application do
 
   @impl true
   def start(_type, _args) do
+    # Initialize MCP SSE sessions table
+    Orchestrator.Web.Handlers.MCPServer.init()
+
     children =
       [
         # Cluster formation (optional - disabled by default)

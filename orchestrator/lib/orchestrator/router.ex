@@ -6,11 +6,13 @@ defmodule Orchestrator.Router do
   - Defines HTTP endpoints (health, cluster, RPC, agent cards, A2A proxy)
   - Dispatches JSON-RPC methods to appropriate handler modules
   - Handles request logging and ID generation
+  - Serves MCP SSE endpoints for external MCP clients
 
   All business logic is delegated to handler modules:
   - `Web.Handlers.Message` - message.send, message.stream
   - `Web.Handlers.Agent` - agents.* methods
   - `Web.Handlers.Task` - tasks.* methods
+  - `Web.Handlers.MCPServer` - MCP SSE transport for external clients
   - `Web.AgentCard` - agent card serving
   - `Web.Proxy` - A2A proxy forwarding
   """
@@ -25,6 +27,7 @@ defmodule Orchestrator.Router do
   alias Orchestrator.Web.Handlers.Agent, as: AgentHandler
   alias Orchestrator.Web.Handlers.Message, as: MessageHandler
   alias Orchestrator.Web.Handlers.Task, as: TaskHandler
+  alias Orchestrator.Web.Handlers.MCPProxy
   alias Orchestrator.Web.Proxy
   alias Orchestrator.Web.RpcErrors
 
@@ -65,6 +68,18 @@ defmodule Orchestrator.Router do
     }
 
     send_resp(conn, 200, Jason.encode!(resp))
+  end
+
+  # -------------------------------------------------------------------
+  # MCP Proxy Endpoints (route to backend MCP servers)
+  # -------------------------------------------------------------------
+
+  get "/mcp/:agent_id" do
+    MCPProxy.handle_sse(conn, agent_id)
+  end
+
+  post "/mcp/:agent_id/messages" do
+    MCPProxy.handle_message(conn, agent_id)
   end
 
   # -------------------------------------------------------------------
