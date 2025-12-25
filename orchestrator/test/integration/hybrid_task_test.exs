@@ -8,7 +8,6 @@ defmodule Orchestrator.Integration.HybridTaskTest do
 
   use Orchestrator.ConnCase, async: false
 
-  alias Orchestrator.Router
   alias Orchestrator.Task.Store, as: TaskStore
   alias Orchestrator.Task.PushConfig
 
@@ -31,16 +30,6 @@ defmodule Orchestrator.Integration.HybridTaskTest do
     end)
 
     :ok
-  end
-
-  # Helper to create a POST request with JSON body
-  defp json_post(path, body) do
-    json_body = Jason.encode!(body)
-
-    :post
-    |> conn(path, json_body)
-    |> put_req_header("content-type", "application/json")
-    |> Router.call(Router.init([]))
   end
 
   describe "tasks.subscribe (hybrid)" do

@@ -44,6 +44,14 @@ defmodule Orchestrator.ConnCase do
         assert conn.status == status
         Jason.decode!(conn.resp_body)
       end
+
+      # Helper to make JSON POST request through router
+      def json_post(path, body) do
+        conn = conn(:post, path, Jason.encode!(body))
+               |> put_req_header("content-type", "application/json")
+
+        Orchestrator.Router.call(conn, Orchestrator.Router.init([]))
+      end
     end
   end
 

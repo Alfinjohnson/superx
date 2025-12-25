@@ -5,7 +5,6 @@ defmodule Orchestrator.Web.Handlers.AgentTest do
   use Orchestrator.ConnCase, async: false
 
   alias Orchestrator.Agent.Store, as: AgentStore
-  alias Orchestrator.Router
 
   setup do
     agent_id = "handler-test-agent-#{:rand.uniform(100_000)}"
@@ -15,16 +14,6 @@ defmodule Orchestrator.Web.Handlers.AgentTest do
     end)
 
     {:ok, agent_id: agent_id}
-  end
-
-  # Helper to create a POST request with JSON body
-  defp json_post(path, body) do
-    json_body = Jason.encode!(body)
-
-    :post
-    |> conn(path, json_body)
-    |> put_req_header("content-type", "application/json")
-    |> Router.call(Router.init([]))
   end
 
   describe "agents.list" do
@@ -135,6 +124,74 @@ defmodule Orchestrator.Web.Handlers.AgentTest do
       assert conn.status == 200
       response = Jason.decode!(conn.resp_body)
       assert response["result"] == true
+    end
+  end
+
+  describe "agents.refreshCard" do
+    test "returns not implemented error" do
+      request = %{
+        "jsonrpc" => "2.0",
+        "id" => "1",
+        "method" => "agents.refreshCard",
+        "params" => %{"id" => "some-agent"}
+      }
+
+      conn = json_post("/rpc", request)
+
+      # Returns error for not implemented
+      assert conn.status == 400
+      response = Jason.decode!(conn.resp_body)
+      assert response["error"]["message"] =~ "not implemented"
+    end
+  end
+
+  describe "agents.health" do
+    test "returns health for agent", %{agent_id: agent_id} do
+      # Create an agent
+      AgentStore.upsert(%{"id" => agent_id, "url" => "http://localhost:8000"})
+
+      request = %{
+        "jsonrpc" => "2.0",
+        "id" => "1",
+        "method" => "agents.health",
+        "params" => %{"id" => agent_id}
+      }
+
+      conn = json_post("/rpc", request)
+
+      assert conn.status == 200
+      response = Jason.decode!(conn.resp_body)
+      assert is_map(response["result"])
+    end
+
+    test "returns error for non-existent agent" do
+      request = %{
+        "jsonrpc" => "2.0",
+        "id" => "1",
+        "method" => "agents.health",
+        "params" => %{"id" => "nonexistent-agent-#{:rand.uniform(100_000)}"}
+      }
+
+      conn = json_post("/rpc", request)
+
+      assert conn.status == 400
+      response = Jason.decode!(conn.resp_body)
+      assert response["error"]["message"] =~ "not found"
+    end
+
+    test "returns health for all agents when no id" do
+      request = %{
+        "jsonrpc" => "2.0",
+        "id" => "1",
+        "method" => "agents.health",
+        "params" => %{}
+      }
+
+      conn = json_post("/rpc", request)
+
+      assert conn.status == 200
+      response = Jason.decode!(conn.resp_body)
+      assert is_list(response["result"])
     end
   end
 end

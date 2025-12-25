@@ -7,18 +7,7 @@ defmodule Orchestrator.RouterHybridTest do
 
   use Orchestrator.ConnCase
 
-  alias Orchestrator.Router
   alias Orchestrator.Task.Store, as: TaskStore
-
-  # Helper to create a POST request with JSON body
-  defp json_post(path, body) do
-    json_body = Jason.encode!(body)
-
-    :post
-    |> conn(path, json_body)
-    |> put_req_header("content-type", "application/json")
-    |> Router.call(Router.init([]))
-  end
 
   describe "tasks.get (hybrid)" do
     test "returns task by id from distributed store" do

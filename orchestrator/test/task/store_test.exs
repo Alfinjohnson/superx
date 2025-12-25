@@ -145,14 +145,23 @@ defmodule Orchestrator.Task.StoreTest do
 
   describe "list/1" do
     test "returns tasks with limit" do
-      task1 = %{"id" => "list-1-#{unique_id()}", "status" => %{"state" => "working"}}
-      task2 = %{"id" => "list-2-#{unique_id()}", "status" => %{"state" => "completed"}}
+      # Create tasks with truly unique IDs
+      unique = System.unique_integer([:positive])
+      task1 = %{"id" => "list-a-#{unique}", "status" => %{"state" => "working"}}
+      task2 = %{"id" => "list-b-#{unique}", "status" => %{"state" => "completed"}}
 
-      Store.put(task1)
-      Store.put(task2)
+      :ok = Store.put(task1)
+      :ok = Store.put(task2)
 
-      tasks = Store.list(limit: 10)
-      assert length(tasks) >= 2
+      # Give the store a moment to process
+      Process.sleep(10)
+
+      tasks = Store.list(limit: 100)
+      task_ids = Enum.map(tasks, & &1["id"])
+
+      # Check that our specific tasks exist
+      assert "list-a-#{unique}" in task_ids
+      assert "list-b-#{unique}" in task_ids
     end
   end
 

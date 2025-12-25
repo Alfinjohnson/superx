@@ -1,4 +1,4 @@
-defmodule Orchestrator.Task.Store.MemoryTest do
+defmodule Orchestrator.Task.Store.FacadeTest do
   @moduledoc """
   Tests for task storage via Task.Store (uses underlying memory/distributed store).
   """

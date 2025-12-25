@@ -22,16 +22,6 @@ defmodule Orchestrator.RouterTest do
     :ok
   end
 
-  # Helper to create a POST request with JSON body
-  defp json_post(path, body) do
-    json_body = Jason.encode!(body)
-
-    :post
-    |> conn(path, json_body)
-    |> put_req_header("content-type", "application/json")
-    |> Router.call(Router.init([]))
-  end
-
   describe "GET /health" do
     test "returns health status" do
       conn = conn(:get, "/health")
