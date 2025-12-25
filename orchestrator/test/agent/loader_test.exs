@@ -186,28 +186,4 @@ defmodule Orchestrator.Agent.LoaderTest do
       Application.put_env(:orchestrator, :agents_file, original_file)
     end
   end
-
-  describe "MCP registry loading" do
-    test "handles missing registry file gracefully" do
-      original_file = Application.get_env(:orchestrator, :mcp_registry_file)
-
-      Application.put_env(:orchestrator, :mcp_registry_file, "/nonexistent/mcp-servers.json")
-
-      result = Loader.load_all()
-      assert {:ok, _count} = result
-
-      Application.put_env(:orchestrator, :mcp_registry_file, original_file)
-    end
-
-    test "handles nil registry config" do
-      original_file = Application.get_env(:orchestrator, :mcp_registry_file)
-
-      Application.put_env(:orchestrator, :mcp_registry_file, nil)
-
-      result = Loader.load_all()
-      assert {:ok, _count} = result
-
-      Application.put_env(:orchestrator, :mcp_registry_file, original_file)
-    end
-  end
 end

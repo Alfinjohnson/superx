@@ -60,8 +60,8 @@ https://superx.local/agents/{id}/.well-known/agent-card.json  # SuperX proxy
 | `name` | string | Unique identifier for the agent |
 | `description` | string | Human-readable description |
 | `url` | string | Endpoint for agent communication |
-| `protocol` | string | Protocol type (`a2a`, `mcp`) |
-| `protocolVersion` | string | Protocol version (`0.3.0`, `2024-11-05`) |
+| `protocol` | string | Protocol type (`a2a`) |
+| `protocolVersion` | string | Protocol version (`0.3.0`) |
 
 ### Optional Fields
 
@@ -78,7 +78,7 @@ https://superx.local/agents/{id}/.well-known/agent-card.json  # SuperX proxy
 
 ## How SuperX Handles Agent Cards
 
-SuperX proxies agent cards through a unified endpoint, handling both A2A and MCP protocols transparently.
+SuperX proxies agent cards through a unified endpoint for A2A protocol agents.
 
 ### Endpoint
 

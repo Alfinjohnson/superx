@@ -7,19 +7,15 @@ defmodule Orchestrator.Protocol.MethodsTest do
   alias Orchestrator.Protocol.Methods
 
   describe "all/0" do
-    test "returns combined A2A and MCP methods" do
+    test "returns A2A methods" do
       all_methods = Methods.all()
 
       assert is_list(all_methods)
-      assert length(all_methods) > 20
+      assert length(all_methods) > 10
 
       # Contains A2A methods
       assert :send_message in all_methods
       assert :get_task in all_methods
-
-      # Contains MCP methods
-      assert :initialize in all_methods
-      assert :list_tools in all_methods
     end
   end
 
@@ -38,34 +34,6 @@ defmodule Orchestrator.Protocol.MethodsTest do
       assert :list_push_configs in methods
       assert :delete_push_config in methods
       assert :get_agent_card in methods
-    end
-  end
-
-  describe "mcp_methods/0" do
-    test "returns all MCP protocol methods" do
-      methods = Methods.mcp_methods()
-
-      # Lifecycle
-      assert :initialize in methods
-      assert :initialized in methods
-      assert :ping in methods
-      assert :shutdown in methods
-
-      # Tools
-      assert :list_tools in methods
-      assert :call_tool in methods
-      assert :tools_changed in methods
-
-      # Resources
-      assert :list_resources in methods
-      assert :read_resource in methods
-
-      # Prompts
-      assert :list_prompts in methods
-      assert :get_prompt in methods
-
-      # Sampling
-      assert :create_message in methods
     end
   end
 

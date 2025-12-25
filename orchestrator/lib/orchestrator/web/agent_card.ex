@@ -8,14 +8,10 @@ defmodule Orchestrator.Web.AgentCard do
   - Fetching cards from remote URLs
   - Protocol-specific card normalization
   - Rewriting card URLs to route through the orchestrator
-  - **Synthesizing cards for MCP servers** from tools/resources/prompts
   """
 
   import Plug.Conn
   require Logger
-
-  alias Orchestrator.MCP.Supervisor, as: MCPSupervisor
-  alias Orchestrator.MCP.Session, as: MCPSession
 
   @doc """
   Serve an agent's card, handling protocol detection and card resolution.
@@ -25,65 +21,14 @@ defmodule Orchestrator.Web.AgentCard do
     protocol = agent["protocol"] || "a2a"
     protocol_version = agent["protocolVersion"] || "0.3.0"
 
-    # MCP agents get synthesized cards from the session
-    if protocol == "mcp" do
-      serve_mcp_card(conn, agent_id, agent)
-    else
-      # Use protocol-specific card handling for A2A and others
-      case Orchestrator.Protocol.adapter_for(protocol, protocol_version) do
-        {:ok, adapter} ->
-          serve_with_adapter(conn, agent_id, agent, adapter)
+    # Use protocol-specific card handling
+    case Orchestrator.Protocol.adapter_for(protocol, protocol_version) do
+      {:ok, adapter} ->
+        serve_with_adapter(conn, agent_id, agent, adapter)
 
-        {:error, _} ->
-          # Fallback for unknown protocols - try generic card serving
-          serve_generic(conn, agent_id, agent)
-      end
-    end
-  end
-
-  @doc """
-  Serve a synthesized agent card for MCP servers.
-
-  MCP servers don't have a `.well-known/agent-card.json` endpoint,
-  so we synthesize one from the session's tools, resources, and prompts.
-  """
-  @spec serve_mcp_card(Plug.Conn.t(), String.t(), map()) :: Plug.Conn.t()
-  def serve_mcp_card(conn, agent_id, _agent) do
-    orchestrator_url = get_orchestrator_url(conn)
-
-    case MCPSupervisor.lookup_session(agent_id) do
-      {:ok, session} ->
-        case MCPSession.get_agent_card(session) do
-          {:ok, card} ->
-            # Add orchestrator URL for routing
-            card = Map.put(card, "url", "#{orchestrator_url}/agents/#{agent_id}")
-            send_resp(conn, 200, Jason.encode!(card))
-
-          {:error, {:not_ready, state}} ->
-            send_resp(
-              conn,
-              503,
-              Jason.encode!(%{
-                error: "MCP session not ready",
-                state: to_string(state),
-                message: "Try again after session initializes"
-              })
-            )
-
-          {:error, reason} ->
-            Logger.warning("Failed to get MCP agent card: #{inspect(reason)}")
-            send_resp(conn, 500, Jason.encode!(%{error: "Failed to build agent card"}))
-        end
-
-      :error ->
-        send_resp(
-          conn,
-          503,
-          Jason.encode!(%{
-            error: "MCP session not found",
-            message: "MCP server may not be running"
-          })
-        )
+      {:error, _} ->
+        # Fallback for unknown protocols - try generic card serving
+        serve_generic(conn, agent_id, agent)
     end
   end
 

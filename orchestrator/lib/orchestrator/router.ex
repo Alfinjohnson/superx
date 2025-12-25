@@ -27,7 +27,6 @@ defmodule Orchestrator.Router do
   alias Orchestrator.Web.Handlers.Agent, as: AgentHandler
   alias Orchestrator.Web.Handlers.Message, as: MessageHandler
   alias Orchestrator.Web.Handlers.Task, as: TaskHandler
-  alias Orchestrator.Web.Handlers.MCPProxy
   alias Orchestrator.Web.Proxy
   alias Orchestrator.Web.RpcErrors
 
@@ -68,18 +67,6 @@ defmodule Orchestrator.Router do
     }
 
     send_resp(conn, 200, Jason.encode!(resp))
-  end
-
-  # -------------------------------------------------------------------
-  # MCP Proxy Endpoints (route to backend MCP servers)
-  # -------------------------------------------------------------------
-
-  get "/mcp/:agent_id" do
-    MCPProxy.handle_sse(conn, agent_id)
-  end
-
-  post "/mcp/:agent_id/messages" do
-    MCPProxy.handle_message(conn, agent_id)
   end
 
   # -------------------------------------------------------------------

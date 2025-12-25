@@ -135,21 +135,11 @@ lib/orchestrator/
 │   ├── envelope.ex         # ← Protocol-agnostic message format
 │   ├── registry.ex         # ← Protocol version registry
 │   ├── methods.ex          # ← Method definitions & specs
-│   ├── a2a/                # ← A2A protocol implementation
-│   │   ├── adapter.ex      # ← A2A wire format translation
-│   │   ├── proxy.ex        # ← Request forwarding to A2A agents
-│   │   ├── push_notifier.ex # ← Webhook delivery logic
-│   │   └── template.ex     # ← Template for new A2A versions
-│   └── mcp/                # ← MCP protocol implementation
-│       ├── adapter.ex      # ← MCP wire format translation
-│       ├── session.ex      # ← Stateful MCP session GenServer
-│       ├── supervisor.ex   # ← MCP session supervision
-│       ├── client_handler.ex # ← Bidirectional request handling
-│       └── transport/
-│           ├── behaviour.ex # ← Transport abstraction
-│           ├── http.ex     # ← HTTP + SSE transport
-│           ├── stdio.ex    # ← STDIO transport for local servers
-│           └── docker.ex   # ← Docker/OCI container transport
+│   └── a2a/                # ← A2A protocol implementation
+│       ├── adapter.ex      # ← A2A wire format translation
+│       ├── proxy.ex        # ← Request forwarding to A2A agents
+│       ├── push_notifier.ex # ← Webhook delivery logic
+│       └── template.ex     # ← Template for new A2A versions
 ├── web/
 │   ├── streaming.ex        # ← SSE streaming handlers
 │   └── agent_card.ex       # ← Agent card endpoints
@@ -161,8 +151,7 @@ test/
 ├── agent/                  # ← Agent tests
 ├── task/                   # ← Task management tests
 ├── protocol/               # ← Protocol-specific tests
-│   ├── adapters/           # ← Adapter tests (A2A, MCP)
-│   └── mcp/                # ← MCP session, supervisor, transport tests
+│   └── adapters/           # ← Adapter tests (A2A)
 ├── web/                    # ← Router, streaming tests
 ├── integration/            # ← End-to-end tests with real agents
 └── stress/                 # ← Load/chaos testing (tagged :stress)
@@ -173,7 +162,6 @@ test/
 - **New protocol?** → `protocol/` + `protocol/behaviour.ex`
 - **Fix routing/circuit breaker?** → `agent/worker.ex`
 - **Add task persistence?** → `task/store.ex`
-- **Add MCP transport?** → `protocol/mcp/transport/` + `behaviour.ex`
 - **New feature?** → Create module in subdirectory + mirror in test/
 
 ## Common Development Tasks
@@ -270,10 +258,6 @@ Orchestrator.Application
 │   ├── Agent.Worker (per-agent GenServer with circuit breaker)
 │   ├── Agent.Worker (per-agent GenServer with circuit breaker)
 │   └── ...
-├── Orchestrator.Protocol.MCP.Supervisor (MCP session management)
-│   ├── Protocol.MCP.Session (per-MCP-agent stateful session)
-│   ├── Protocol.MCP.Session (per-MCP-agent stateful session)
-│   └── ...
 ├── Orchestrator.Protocol.A2A.PushNotifier (GenServer + async webhook delivery)
 ├── Orchestrator.Infra.HttpClient (Finch connection pool)
 ├── Orchestrator.Infra.Cluster (libcluster auto-discovery)
@@ -289,9 +273,7 @@ Orchestrator.Application
 | **Distributed Registry** | `Horde.Registry` | Track agents across cluster nodes |
 | **Distributed Supervisor** | `Horde.DynamicSupervisor` | Supervise workers across cluster |
 | **ETS Storage** | `Task.Store`, `Agent.Store` | Fast in-memory data access |
-| **Protocol Adapters** | `Protocol.A2A.Adapter`, `Protocol.MCP.Adapter` | Pluggable protocol support |
-| **Transport Abstraction** | `Protocol.MCP.Transport.Behaviour` | Pluggable MCP transports (HTTP, STDIO, Docker) |
-| **Stateful Sessions** | `Protocol.MCP.Session` | Persistent MCP connections with caching |
+| **Protocol Adapters** | `Protocol.A2A.Adapter` | Pluggable protocol support |
 
 ### Request Flow
 
@@ -303,11 +285,6 @@ HTTP Request → Router → RPC.Router → Handler → Agent.Worker → A2A.Prox
      ↓
 A2A.PushNotifier → Webhook (async)
 ```
-
-**MCP Protocol:**
-```
-HTTP Request → Router → Handler → Agent.Worker → MCP.Session → Transport → MCP Server
-     ↓                                              ↓
   Response  ←──────────────────────────────────────┘
      ↓                                              ↑
 A2A.PushNotifier → Webhook (async)             (HTTP/SSE/STDIO/Docker)

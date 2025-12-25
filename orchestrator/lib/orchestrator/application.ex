@@ -7,9 +7,6 @@ defmodule Orchestrator.Application do
 
   @impl true
   def start(_type, _args) do
-    # Initialize MCP SSE sessions table
-    Orchestrator.Web.Handlers.MCPServer.init()
-
     children =
       [
         # Cluster formation (optional - disabled by default)
@@ -22,9 +19,6 @@ defmodule Orchestrator.Application do
         # Distributed registry & supervisor (works single-node and clustered)
         {Horde.Registry, [name: Orchestrator.Agent.Registry, keys: :unique, members: :auto]},
         {Orchestrator.Agent.Supervisor, []},
-
-        # MCP session management
-        Orchestrator.MCP.Supervisor,
 
         # PubSub for task notifications
         Orchestrator.Task.PubSub,

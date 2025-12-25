@@ -21,7 +21,7 @@ Agentic frameworks like Google ADK, LangGraph, and AutoGen already help develope
 
 But as systems scale, teams often need a **shared infrastructure layer** that sits *between* agents — especially when agents are built using different frameworks, deployed independently, or scaled separately.
 
-Google's [A2A Protocol](https://github.com/google/A2A) and Anthropic's MCP define common standards for how agents communicate and exchange context. But **protocols alone don't handle runtime concerns**: routing, backpressure, resilience, persistence, or real-time coordination.
+Google's [A2A Protocol](https://github.com/google/A2A) defines common standards for how agents communicate and exchange context. But **protocols alone don't handle runtime concerns**: routing, backpressure, resilience, persistence, or real-time coordination.
 
 **That's the gap SuperX is exploring.**
 
@@ -45,8 +45,8 @@ If you're managing a single agent or all agents are tightly coupled within one f
                     ─────────────────             ─────────              ──────────────
                     
                     ✅ LangGraph                  ✅ A2A Protocol        ❓ Routing
-                    ✅ AutoGen                    ✅ MCP Protocol        ❓ Load Balancing
-                    ✅ Google ADK                 ✅ Standards           ❓ Backpressure
+                    ✅ AutoGen                    ✅ Standards           ❓ Load Balancing
+                    ✅ Google ADK                                        ❓ Backpressure
                     ✅ Custom                                            ❓ Circuit Breakers
                                                                          ❓ Task Persistence
                                                                          ❓ Multi-Agent Coordination
@@ -61,7 +61,7 @@ SuperX acts as an **agentic gateway and orchestrator**, handling infrastructure 
 - **Built-in resilience** — Circuit breakers, backpressure, and graceful degradation
 - **Task persistence** — Track multi-turn conversations and handle failures
 - **Dynamic agent registry** — Register/deregister agents without restarting
-- **Protocol-agnostic** — Supports A2A and MCP protocols, extensible for custom protocols
+- **A2A Protocol support** — Full support for Google's Agent-to-Agent protocol
 
 If AI agents are like **specialized employees**, SuperX is the **shared infrastructure** — routing conversations, managing failures, and keeping work moving when parts of the system slow down or fail.
 
@@ -99,7 +99,6 @@ If AI agents are like **specialized employees**, SuperX is the **shared infrastr
 | **Backpressure** | Per-agent concurrency limits prevent cascade failures |
 | **Dynamic Registry** | Register/deregister agents at runtime without restarts |
 | **A2A Protocol** | Full support for Google's Agent-to-Agent protocol |
-| **MCP Protocol** | Full support for Anthropic's Model Context Protocol (HTTP, SSE, STDIO) |
 | **Per-Request Webhooks** | Ephemeral notifications without pre-configuration |
 | **Push Notifications** | Webhook-based notifications with HMAC, JWT, or token auth |
 | **Horizontal Scaling** | Distribute across Erlang nodes, no external database required |
@@ -158,38 +157,24 @@ agents:
             name: Skill Name
             description: What this skill does
 
-  # MCP Protocol Agent (HTTP transport)
-  exa_search:
-    protocol: mcp
-    protocolVersion: 2024-11-05
-    transport:
-      type: streamable-http
-      url: https://mcp.exa.ai/mcp
-      headers:
-        Authorization: Bearer ${EXA_API_KEY}
-
-  # MCP Protocol Agent (STDIO transport for local tools)
-  local_filesystem:
-    protocol: mcp
-    transport:
-      type: stdio
-      command: npx
-      args:
-        - "-y"
-        - "@modelcontextprotocol/server-filesystem"
-        - "/home/user/documents"
+  # Another A2A Agent
+  assistant_agent:
+    url: http://localhost:8002/a2a/assistant
+    protocol: a2a
+    protocolVersion: 0.3.0
+    metadata:
+      agentCard:
+        url: http://localhost:8002/a2a/assistant/.well-known/agent-card.json
+        name: assistant_agent
+        description: General purpose assistant agent
 ```
 
 **URL Configuration:**
 - `url`: The A2A JSON-RPC endpoint of your agent server (e.g., `http://host:port/a2a/agent_name`)
 - `agentCard.url`: The agent card discovery endpoint (typically `{agent_url}/.well-known/agent-card.json`)
+- `bearer`: Optional authentication token for securing agent communication
 
-**MCP Transport Types:**
-- `streamable-http`: HTTP POST with streaming responses (recommended)
-- `sse`: Server-Sent Events for legacy MCP servers
-- `stdio`: Standard I/O for local MCP server processes
-
-> **Note:** For A2A agents, you need an A2A-compatible agent server running at the specified URL. See the [Google A2A Python samples](https://github.com/google/A2A/tree/main/samples/python). For MCP servers, see the [MCP Server Registry](https://github.com/modelcontextprotocol/servers).
+> **Note:** You need an A2A-compatible agent server running at the specified URL. See the [Google A2A Python samples](https://github.com/google/A2A/tree/main/samples/python) for example implementations.
 
 Set the `SUPERX_AGENTS_FILE` environment variable to load your agents:
 
@@ -414,10 +399,9 @@ superx/
 │   │       ├── agent/     # Agent management (Store, Loader, Worker)
 │   │       ├── task/      # Task management (Store, Streaming)
 │   │       ├── protocol/  # Protocol implementations
-│   │       │   ├── a2a/   # A2A protocol (Adapter, Proxy, PushNotifier)
-│   │       │   └── mcp/   # MCP protocol (Session, Supervisor, Transports)
+│   │       │   └── a2a/   # A2A protocol (Adapter, Proxy, PushNotifier)
 │   │       └── web/       # Web layer (Router, Streaming, AgentCard)
-│   └── test/              # Test suite (276+ tests)
+│   └── test/              # Test suite (500+ tests)
 │       ├── protocol/      # Protocol-specific tests
 │       └── stress/        # Stress and performance tests
 ├── docs/                  # Protocol documentation
@@ -448,9 +432,6 @@ superx/
 - **[A2A Documentation](https://google.github.io/A2A/)** — Official protocol documentation
 - **[A2A Python Samples](https://github.com/google/A2A/tree/main/samples/python)** — Example agent implementations
 - **[A2A v0.3.0 Spec](docs/a2a-v030/specification.md)** — Local copy of A2A specification
-- **[MCP Protocol](https://modelcontextprotocol.io/)** — Anthropic's Model Context Protocol
-- **[MCP Specification](https://spec.modelcontextprotocol.io/)** — Official MCP specification
-- **[MCP Server Registry](https://github.com/modelcontextprotocol/servers)** — Pre-built MCP servers
 
 ## Tech Stack
 
@@ -463,7 +444,7 @@ Built with **Elixir and OTP** — designed for exactly what we need: long-runnin
 | **Distributed State** | Horde (distributed registry, supervisor) |
 | **Clustering** | libcluster (gossip, DNS, Kubernetes) |
 | **Container** | Docker (multi-stage build, ~65MB image) |
-| **Testing** | ExUnit (276+ tests, 32%+ coverage) |
+| **Testing** | ExUnit (500+ tests, high coverage) |
 
 ## Contributing
 

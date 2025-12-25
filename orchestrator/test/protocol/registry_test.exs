@@ -13,12 +13,6 @@ defmodule Orchestrator.Protocol.RegistryTest do
       assert {:ok, Orchestrator.Protocol.Adapters.A2A} = result
     end
 
-    test "returns MCP adapter for mcp 2024-11-05" do
-      result = Registry.adapter_for("mcp", "2024-11-05")
-
-      assert {:ok, Orchestrator.Protocol.Adapters.MCP} = result
-    end
-
     test "returns error for unsupported version" do
       result = Registry.adapter_for("a2a", "999.0.0")
 
@@ -31,12 +25,6 @@ defmodule Orchestrator.Protocol.RegistryTest do
       result = Registry.adapter_for_latest("a2a")
 
       assert {:ok, Orchestrator.Protocol.Adapters.A2A} = result
-    end
-
-    test "returns latest MCP adapter" do
-      result = Registry.adapter_for_latest("mcp")
-
-      assert {:ok, Orchestrator.Protocol.Adapters.MCP} = result
     end
 
     test "returns error for unsupported protocol" do
@@ -74,13 +62,6 @@ defmodule Orchestrator.Protocol.RegistryTest do
       assert "0.3.0" in versions
     end
 
-    test "returns versions for mcp protocol" do
-      versions = Registry.supported_versions("mcp")
-
-      assert is_list(versions)
-      assert "2024-11-05" in versions
-    end
-
     test "returns empty list for unknown protocol" do
       versions = Registry.supported_versions("unknown")
 
@@ -94,14 +75,12 @@ defmodule Orchestrator.Protocol.RegistryTest do
 
       assert is_list(protocols)
       assert "a2a" in protocols
-      assert "mcp" in protocols
     end
   end
 
   describe "supported?/2" do
     test "returns true for supported combinations" do
       assert Registry.supported?("a2a", "0.3.0") == true
-      assert Registry.supported?("mcp", "2024-11-05") == true
     end
 
     test "returns false for unsupported combinations" do
@@ -150,15 +129,11 @@ defmodule Orchestrator.Protocol.RegistryTest do
       adapters = Registry.list_adapters()
 
       assert is_list(adapters)
-      assert length(adapters) >= 2
+      assert length(adapters) >= 1
 
       a2a_adapter = Enum.find(adapters, &(&1.protocol == "a2a"))
       assert a2a_adapter.version == "0.3.0"
       assert a2a_adapter.module == Orchestrator.Protocol.Adapters.A2A
-
-      mcp_adapter = Enum.find(adapters, &(&1.protocol == "mcp"))
-      assert mcp_adapter.version == "2024-11-05"
-      assert mcp_adapter.module == Orchestrator.Protocol.Adapters.MCP
     end
   end
 end

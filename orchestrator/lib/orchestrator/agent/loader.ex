@@ -52,13 +52,10 @@ defmodule Orchestrator.Agent.Loader do
     # 3. Load from environment variable (legacy)
     env_count = load_from_env()
 
-    # 4. Load from MCP registry file (if configured)
-    mcp_count = load_from_mcp_registry()
-
-    total = yaml_count + config_count + env_count + mcp_count
+    total = yaml_count + config_count + env_count
 
     Logger.info(
-      "Agent loader: loaded #{total} agents (yaml: #{yaml_count}, config: #{config_count}, env: #{env_count}, mcp: #{mcp_count})"
+      "Agent loader: loaded #{total} agents (yaml: #{yaml_count}, config: #{config_count}, env: #{env_count})"
     )
 
     {:ok, total}
@@ -106,7 +103,7 @@ defmodule Orchestrator.Agent.Loader do
   end
 
   defp load_from_config do
-    agents = Application.get_env(:orchestrator, :agents, %{})
+    agents = Application.get_env(:orchestrator, :agents) || %{}
 
     if map_size(agents) > 0 do
       Enum.each(agents, fn {id, config} ->
@@ -141,158 +138,9 @@ defmodule Orchestrator.Agent.Loader do
     end
   end
 
-  # Load MCP servers from a registry JSON file.
-  # Registry format follows the MCP registry specification.
-  defp load_from_mcp_registry do
-    case Application.get_env(:orchestrator, :mcp_registry_file) do
-      nil ->
-        0
-
-      "" ->
-        0
-
-      registry_file ->
-        if File.exists?(registry_file) do
-          case File.read(registry_file) do
-            {:ok, content} ->
-              case Jason.decode(content) do
-                {:ok, %{"mcpServers" => servers}} when is_map(servers) ->
-                  load_mcp_servers(servers)
-
-                {:ok, _} ->
-                  Logger.warning("MCP registry exists but has no 'mcpServers' key")
-                  0
-
-                {:error, reason} ->
-                  Logger.warning("Failed to parse MCP registry JSON: #{inspect(reason)}")
-                  0
-              end
-
-            {:error, reason} ->
-              Logger.warning("Failed to read MCP registry file: #{inspect(reason)}")
-              0
-          end
-        else
-          Logger.warning("MCP_REGISTRY_FILE configured but not found: #{registry_file}")
-          0
-        end
-    end
-  end
-
-  defp load_mcp_servers(servers) do
-    Enum.each(servers, fn {id, config} ->
-      agent = mcp_server_to_agent(id, config)
-      Store.upsert(agent)
-      Logger.debug("Loaded MCP server from registry: #{id}")
-    end)
-
-    map_size(servers)
-  end
-
-  @doc """
-  Convert MCP registry server format to agent config.
-
-  MCP Registry format:
-      {
-        "mcpServers": {
-          "server_name": {
-            "command": "npx",
-            "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path"],
-            "env": {"KEY": "value"}
-          }
-        }
-      }
-
-  Or for HTTP:
-      {
-        "mcpServers": {
-          "remote_server": {
-            "url": "https://mcp.example.com",
-            "transport": {"type": "streamable-http"}
-          }
-        }
-      }
-  """
-  def mcp_server_to_agent(id, config) do
-    transport = build_transport_config(config)
-
-    %{
-      "id" => to_string(id),
-      "protocol" => "mcp",
-      "protocolVersion" => config["protocolVersion"] || "2024-11-05",
-      "transport" => transport,
-      "metadata" => %{
-        "source" => "mcp_registry",
-        "description" => config["description"]
-      }
-    }
-  end
-
-  defp build_transport_config(%{"command" => command} = config) do
-    # STDIO transport
-    %{
-      "type" => "stdio",
-      "command" => command,
-      "args" => config["args"] || [],
-      "env" => expand_env_vars(config["env"] || %{})
-    }
-  end
-
-  defp build_transport_config(%{"url" => url} = config) do
-    # HTTP transport
-    transport_type =
-      case config["transport"] do
-        %{"type" => type} -> type
-        _ -> "streamable-http"
-      end
-
-    headers =
-      case config["transport"] do
-        %{"headers" => h} -> expand_env_vars(h)
-        _ -> %{}
-      end
-
-    %{
-      "type" => transport_type,
-      "url" => expand_env_var(url),
-      "headers" => headers
-    }
-  end
-
-  defp build_transport_config(config) do
-    # Try to infer from transport key
-    case config["transport"] do
-      %{"type" => "stdio"} = t ->
-        %{
-          "type" => "stdio",
-          "command" => t["command"],
-          "args" => t["args"] || [],
-          "env" => expand_env_vars(t["env"] || %{})
-        }
-
-      %{"type" => type, "url" => url} = t when type in ["streamable-http", "sse"] ->
-        %{
-          "type" => type,
-          "url" => expand_env_var(url),
-          "headers" => expand_env_vars(t["headers"] || %{})
-        }
-
-      # OCI package format
-      %{"package" => %{"registryType" => "oci"} = package} = t ->
-        %{
-          "type" => "stdio",
-          "package" => %{
-            "name" => expand_env_var(package["name"]),
-            "registryType" => "oci"
-          },
-          "env" => expand_env_vars(t["env"] || %{})
-        }
-
-      _ ->
-        Logger.warning("Unable to determine transport config: #{inspect(config)}")
-        %{"type" => "unknown"}
-    end
-  end
+  # -------------------------------------------------------------------
+  # Agent Normalization
+  # -------------------------------------------------------------------
 
   @doc """
   Normalize an agent config, ensuring required fields and defaults.

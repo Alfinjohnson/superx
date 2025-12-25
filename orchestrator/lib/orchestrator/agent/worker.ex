@@ -35,8 +35,6 @@ defmodule Orchestrator.Agent.Worker do
   alias Orchestrator.Protocol.Envelope
   alias Orchestrator.Agent.Store, as: AgentStore
   alias Orchestrator.Infra.SSEClient
-  alias Orchestrator.MCP.Session, as: MCPSession
-  alias Orchestrator.MCP.Supervisor, as: MCPSupervisor
 
   # Default configuration - can be overridden via config or per-agent
   @default_max_in_flight 10
@@ -118,7 +116,6 @@ defmodule Orchestrator.Agent.Worker do
   @impl true
   def init(agent) do
     adapter = Protocol.adapter_for_agent(agent)
-    protocol = agent["protocol"] || "a2a"
 
     state = %__MODULE__{
       agent_id: agent["id"],
@@ -135,14 +132,6 @@ defmodule Orchestrator.Agent.Worker do
       failure_window_ms: Map.get(agent, "failureWindowMs", default_failure_window_ms()),
       cooldown_ms: Map.get(agent, "cooldownMs", default_cooldown_ms())
     }
-
-    # Start MCP session if this is an MCP agent
-    if protocol == "mcp" do
-      case MCPSupervisor.start_session(agent) do
-        {:ok, _pid} -> Logger.debug("MCP session started for #{agent["id"]}")
-        {:error, reason} -> Logger.warning("Failed to start MCP session: #{inspect(reason)}")
-      end
-    end
 
     {:ok, state}
   end
@@ -218,106 +207,10 @@ defmodule Orchestrator.Agent.Worker do
   # -------------------------------------------------------------------
 
   defp do_call(state, env) do
-    protocol = state.agent["protocol"] || "a2a"
-
-    if protocol == "mcp" do
-      do_mcp_call(state, env)
-    else
-      do_a2a_call(state, env)
-    end
+    do_a2a_call(state, env)
   end
 
-  # MCP protocol - route through MCP.Session
-  defp do_mcp_call(state, env) do
-    emit_telemetry(:call_start, state, env)
-
-    case MCPSupervisor.lookup_session(state.agent_id) do
-      {:ok, session} ->
-        # Map envelope method to MCP operation
-        result = dispatch_mcp_method(session, env)
-
-        case result do
-          {:ok, _} = success ->
-            emit_telemetry(:call_stop, state, env, %{status: 200})
-            success
-
-          {:error, {:process_exited, _code} = reason} ->
-            # Process crash - should trigger circuit breaker
-            Logger.warning("MCP process crashed",
-              agent_id: state.agent_id,
-              error: inspect(reason)
-            )
-
-            emit_telemetry(:call_error, state, env, %{error: reason, breaker_trigger: true})
-            {:error, {:mcp_error, reason}}
-
-          {:error, {:transport_error, _} = reason} ->
-            # Transport failure - should trigger circuit breaker
-            Logger.warning("MCP transport error",
-              agent_id: state.agent_id,
-              error: inspect(reason)
-            )
-
-            emit_telemetry(:call_error, state, env, %{error: reason, breaker_trigger: true})
-            {:error, {:mcp_error, reason}}
-
-          {:error, %{"code" => code} = error} when code in [-32600, -32601, -32602, -32603] ->
-            # JSON-RPC errors (invalid request, method not found, etc.) - don't trigger breaker
-            Logger.warning("MCP JSON-RPC error", agent_id: state.agent_id, error: inspect(error))
-            emit_telemetry(:call_error, state, env, %{error: error, breaker_trigger: false})
-            {:error, {:mcp_rpc_error, error}}
-
-          {:error, reason} ->
-            # Other errors - trigger circuit breaker
-            Logger.warning("MCP call failed", agent_id: state.agent_id, error: inspect(reason))
-            emit_telemetry(:call_error, state, env, %{error: reason, breaker_trigger: true})
-            {:error, {:mcp_error, reason}}
-        end
-
-      :error ->
-        Logger.warning("MCP session not found", agent_id: state.agent_id)
-        emit_telemetry(:call_error, state, env, %{error: :session_not_found})
-        {:error, {:mcp_error, :session_not_found}}
-    end
-  end
-
-  # Dispatch MCP method based on envelope
-  defp dispatch_mcp_method(session, %Envelope{method: :call_tool, payload: payload}) do
-    tool_name = payload["name"] || payload["tool"]
-    arguments = payload["arguments"] || %{}
-    MCPSession.call_tool(session, tool_name, arguments)
-  end
-
-  defp dispatch_mcp_method(session, %Envelope{method: :list_tools}) do
-    MCPSession.list_tools(session)
-  end
-
-  defp dispatch_mcp_method(session, %Envelope{method: :read_resource, payload: payload}) do
-    uri = payload["uri"]
-    MCPSession.read_resource(session, uri)
-  end
-
-  defp dispatch_mcp_method(session, %Envelope{method: :list_resources}) do
-    MCPSession.list_resources(session)
-  end
-
-  defp dispatch_mcp_method(session, %Envelope{method: :get_prompt, payload: payload}) do
-    name = payload["name"]
-    arguments = payload["arguments"] || %{}
-    MCPSession.get_prompt(session, name, arguments)
-  end
-
-  defp dispatch_mcp_method(session, %Envelope{method: :list_prompts}) do
-    MCPSession.list_prompts(session)
-  end
-
-  defp dispatch_mcp_method(session, %Envelope{method: method, payload: payload}) do
-    # Generic request for other methods
-    wire_method = Orchestrator.Protocol.Adapters.MCP.wire_method(method)
-    MCPSession.request(session, wire_method, payload)
-  end
-
-  # A2A protocol - existing HTTP-based call
+  # A2A protocol - HTTP-based call
   defp do_a2a_call(state, env) do
     url = state.agent["url"]
     headers = build_headers(state.agent)

@@ -193,19 +193,17 @@ Natural language agent selection without knowing skill names:
 
 ## Phase 3 – Multi-Protocol & Tooling Support
 
-**Story:** *"My agents need to query databases, read files, and call APIs. I don't want each agent to implement these integrations – SuperX should provide tools that any agent can use."*
+**Story:** *"I want to add support for new protocols or integrate custom tool providers without modifying SuperX core code."*
 
-**Goal**: Enable AI agents to access tools via MCP and support multiple agent protocols.
+**Goal**: Enable protocol extensibility and tool integration through plugin architecture.
 
 | Task | Status | Description |
-|------|--------|-------------|
-| MCP client integration | 📋 Planned | Connect to MCP servers for tool access |
-| MCP server mode | 📋 Planned | Expose SuperX as an MCP server |
-| Tool registry | 📋 Planned | Unified registry of available tools |
-| Tool routing | 📋 Planned | Route tool calls to appropriate MCP servers |
-| Resource access | 📋 Planned | File, database, and API resource providers |
-| Protocol adapters | 📋 Planned | Pluggable protocol architecture |
-| Protocol translation | 📋 Planned | Cross-protocol message routing (A2A ↔ MCP) |
+|------|--------|-----------|
+| Protocol plugin system | 📋 Planned | Support for custom protocol adapters |
+| Tool provider abstraction | 📋 Planned | Pluggable tool/resource providers |
+| Agent SDK | 📋 Planned | Helper library for building A2A agents |
+| Protocol adapters | 📋 Planned | Extensible protocol architecture |
+| Custom transport support | 📋 Planned | Support for non-HTTP transports |
 
 ### MCP Integration Architecture
 
@@ -228,66 +226,18 @@ Natural language agent selection without knowing skill names:
            └───────────────┘              └───────────────┘              └───────────────┘
 ```
 
-### Supported MCP Features
+### Protocol Extension Points
 
-| Feature | Description |
-|---------|-------------|
-| **Tools** | Execute functions on MCP servers (SQL queries, file ops, API calls) |
-| **Resources** | Access files, database schemas, API docs as context |
-| **Prompts** | Reusable prompt templates with arguments |
-| **Sampling** | Request LLM completions through MCP servers |
-
-### Example: Tool Call via SuperX
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/call",
-  "params": {
-    "server": "postgres-mcp",
-    "tool": "query",
-    "arguments": {
-      "sql": "SELECT * FROM users LIMIT 10"
-    }
-  }
-}
-```
-
-### Example: List Available Tools
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/list",
-  "params": {}
-}
-```
-
-**Response:**
-```json
-{
-  "tools": [
-    {
-      "name": "query",
-      "server": "postgres-mcp",
-      "description": "Execute SQL queries",
-      "inputSchema": { ... }
-    },
-    {
-      "name": "read_file",
-      "server": "filesystem-mcp",
-      "description": "Read file contents",
-      "inputSchema": { ... }
-    }
-  ]
-}
-```
+| Extension Point | Description |
+|----------------|-------------|
+| **Protocol Adapters** | Implement custom wire protocols (gRPC, WebSocket, etc.) |
+| **Transport Plugins** | Custom communication mechanisms |
+| **Message Transformers** | Protocol translation and adaptation |
+| **Agent SDKs** | Helper libraries for building compatible agents |
 
 ---
 
-## Phase 4 – Observability & Monitoring
+## Phase 5 – Observability & Monitoring
 
 **Story:** *"When something goes wrong, I need to know immediately. I want dashboards showing agent health, request latency, and error rates – without building custom monitoring."*
 
