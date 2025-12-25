@@ -35,11 +35,14 @@ defmodule Orchestrator.Task.Store.FacadeTest do
   end
 
   describe "delete/1" do
-    test "deletes a task", %{task_id: task_id} do
+    test "deletes a task" do
+      task_id = "delete-test-#{System.unique_integer([:positive])}"
       task = %{"id" => task_id, "status" => %{"state" => "working"}}
-      Store.put(task)
+      :ok = Store.put(task)
+      Process.sleep(20)
 
       assert :ok = Store.delete(task_id)
+      Process.sleep(10)
       assert Store.get(task_id) == nil
     end
 

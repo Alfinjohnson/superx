@@ -12,6 +12,8 @@ defmodule Orchestrator.Task.Store.MemoryTest do
     task_id = "task-mem-#{:rand.uniform(100_000)}"
     task = %{"id" => task_id, "status" => %{"state" => "working"}}
     :ok = TaskStore.put(task)
+    # Allow async store to complete
+    Process.sleep(20)
 
     on_exit(fn ->
       TaskStore.delete(task_id)
@@ -142,7 +144,11 @@ defmodule Orchestrator.Task.Store.MemoryTest do
     end
 
     test "returns error for nonexistent task" do
-      update = %{"taskId" => "nonexistent-#{:rand.uniform(100_000)}", "status" => %{"state" => "working"}}
+      update = %{
+        "taskId" => "nonexistent-#{:rand.uniform(100_000)}",
+        "status" => %{"state" => "working"}
+      }
+
       assert {:error, :not_found} = TaskStore.apply_status_update(update)
     end
 
@@ -154,7 +160,11 @@ defmodule Orchestrator.Task.Store.MemoryTest do
     test "broadcasts status update", %{task_id: task_id} do
       PubSub.subscribe(task_id)
 
-      update = %{"taskId" => task_id, "status" => %{"state" => "working", "message" => "progress"}}
+      update = %{
+        "taskId" => task_id,
+        "status" => %{"state" => "working", "message" => "progress"}
+      }
+
       :ok = TaskStore.apply_status_update(update)
 
       assert_receive {:status_update, _task}, 1000
@@ -176,12 +186,16 @@ defmodule Orchestrator.Task.Store.MemoryTest do
     end
 
     test "updates existing artifact by name", %{task_id: task_id} do
+      # Ensure task exists
+      assert TaskStore.get(task_id) != nil
+
       update1 = %{
         "taskId" => task_id,
         "artifact" => %{"name" => "file.txt", "data" => "v1"}
       }
 
       :ok = TaskStore.apply_artifact_update(update1)
+      Process.sleep(10)
 
       update2 = %{
         "taskId" => task_id,
@@ -189,6 +203,7 @@ defmodule Orchestrator.Task.Store.MemoryTest do
       }
 
       :ok = TaskStore.apply_artifact_update(update2)
+      Process.sleep(10)
 
       result = TaskStore.get(task_id)
       assert length(result["artifacts"]) == 1

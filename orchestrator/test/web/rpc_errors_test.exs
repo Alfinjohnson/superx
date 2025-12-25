@@ -38,7 +38,8 @@ defmodule Orchestrator.Web.RpcErrorsTest do
     end
 
     test "builds error response with data" do
-      response = RpcErrors.error_response("req-2", -32602, "Invalid params", %{"field" => "agentId"})
+      response =
+        RpcErrors.error_response("req-2", -32602, "Invalid params", %{"field" => "agentId"})
 
       assert response["error"]["code"] == -32602
       assert response["error"]["message"] == "Invalid params"
@@ -68,7 +69,8 @@ defmodule Orchestrator.Web.RpcErrorsTest do
     test "sends error response with data" do
       conn = conn(:post, "/rpc", "")
 
-      result = RpcErrors.send_error(conn, "req-1", -32602, "Invalid params", %{"details" => "test"})
+      result =
+        RpcErrors.send_error(conn, "req-1", -32602, "Invalid params", %{"details" => "test"})
 
       response = Jason.decode!(result.resp_body)
       assert response["error"]["data"]["details"] == "test"
@@ -140,7 +142,8 @@ defmodule Orchestrator.Web.RpcErrorsTest do
     end
 
     test "passes through remote JSON-RPC errors" do
-      {code, message} = RpcErrors.from_internal_error({:error, %{"code" => -32001, "message" => "Custom error"}})
+      {code, message} =
+        RpcErrors.from_internal_error({:error, %{"code" => -32001, "message" => "Custom error"}})
 
       assert code == -32001
       assert message == "Custom error"

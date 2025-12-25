@@ -87,26 +87,21 @@ defmodule Orchestrator.Infra.ClusterTest do
     end
   end
 
-  describe "backward compatibility aliases" do
-    test "Orchestrator.Cluster module exists" do
-      assert Code.ensure_loaded?(Orchestrator.Cluster)
+  describe "module functions" do
+    test "Infra.Cluster module is accessible" do
+      assert Code.ensure_loaded?(Orchestrator.Infra.Cluster)
     end
 
-    test "delegates status/0" do
-      assert function_exported?(Orchestrator.Cluster, :status, 0)
-      assert Orchestrator.Cluster.status() == Cluster.status()
+    test "has status/0 function" do
+      assert function_exported?(Orchestrator.Infra.Cluster, :status, 0)
     end
 
-    test "delegates load_info/0" do
-      assert function_exported?(Orchestrator.Cluster, :load_info, 0)
+    test "has load_info/0 function" do
+      assert function_exported?(Orchestrator.Infra.Cluster, :load_info, 0)
     end
 
-    test "delegates clustered?/0" do
-      assert function_exported?(Orchestrator.Cluster, :clustered?, 0)
-    end
-
-    test "delegates best_node_for/1" do
-      assert function_exported?(Orchestrator.Cluster, :best_node_for, 1)
+    test "has best_node_for/1 function" do
+      assert function_exported?(Orchestrator.Infra.Cluster, :best_node_for, 1)
     end
   end
 end

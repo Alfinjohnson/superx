@@ -89,6 +89,10 @@ defmodule Orchestrator.Protocol.A2A.PushNotifierTest do
     end
 
     test "delegates deliver/2 function" do
+      # Ensure modules are loaded
+      Code.ensure_loaded!(Orchestrator.Infra.PushNotifier)
+      Code.ensure_loaded!(Orchestrator.PushNotifier)
+
       # Both aliases should have deliver/2
       assert function_exported?(Orchestrator.Infra.PushNotifier, :deliver, 2)
       assert function_exported?(Orchestrator.PushNotifier, :deliver, 2)

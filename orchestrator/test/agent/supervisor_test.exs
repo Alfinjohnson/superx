@@ -98,6 +98,7 @@ defmodule Orchestrator.Agent.SupervisorTest do
       workers = AgentSupervisor.list_workers()
 
       assert is_list(workers)
+
       Enum.each(workers, fn pid ->
         assert is_pid(pid)
       end)

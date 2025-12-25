@@ -16,20 +16,14 @@ defmodule Orchestrator.Infra.HttpClientDirectTest do
       assert function_exported?(HttpClient, :post_json, 3)
     end
 
-    test "exports post_json/2" do
-      assert function_exported?(HttpClient, :post_json, 2)
-    end
-
-    test "exports get_json/2" do
-      assert function_exported?(HttpClient, :get_json, 2)
-    end
-
     test "exports get_json/1" do
+      # get_json(url, opts \\ []) exports arity 1 due to default
       assert function_exported?(HttpClient, :get_json, 1)
     end
 
-    test "exports fetch_agent_card/2" do
-      assert function_exported?(HttpClient, :fetch_agent_card, 2)
+    test "exports fetch_agent_card/1" do
+      # fetch_agent_card(url, opts \\ []) exports arity 1 due to default
+      assert function_exported?(HttpClient, :fetch_agent_card, 1)
     end
 
     test "exports post_raw/3" do

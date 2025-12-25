@@ -17,6 +17,8 @@ defmodule Orchestrator.Task.StoreTest do
       }
 
       assert :ok = Store.put(task)
+      # Allow async store to complete
+      Process.sleep(20)
 
       # Verify it was stored
       stored = Store.get(task["id"])
@@ -167,9 +169,11 @@ defmodule Orchestrator.Task.StoreTest do
 
   describe "apply_status_update/1" do
     test "updates task status" do
-      task_id = "task-#{unique_id()}"
+      task_id = "status-update-#{System.unique_integer([:positive])}"
       task = %{"id" => task_id, "status" => %{"state" => "submitted"}}
-      Store.put(task)
+      :ok = Store.put(task)
+      # Allow async store to complete
+      Process.sleep(20)
 
       update = %{
         "taskId" => task_id,
