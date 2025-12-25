@@ -26,6 +26,19 @@ defmodule Orchestrator.ConnCase do
         |> put_req_header("content-type", "application/json")
       end
 
+      # Helper to build RPC connection
+      def build_rpc_conn do
+        conn(:post, "/rpc", "")
+        |> put_req_header("content-type", "application/json")
+      end
+
+      # Helper to post RPC request
+      def post_rpc(conn, body) do
+        conn
+        |> Map.put(:body_params, body)
+        |> Orchestrator.Router.call(Orchestrator.Router.init([]))
+      end
+
       # Helper to JSON decode response body
       def json_response(conn, status) do
         assert conn.status == status
