@@ -6,32 +6,33 @@ Strategic roadmap for SuperX Agentic Gateway Orchestrator development.
 
 ## Current State ✅
 
-SuperX is an experimental A2A Protocol gateway with:
+SuperX is an A2A Protocol gateway with:
 
 - Full A2A v0.3.0 protocol implementation
-- OTP-distributed task management via Horde (pure in-memory)
+- Hybrid PostgreSQL + ETS caching for durability with fast reads
+- OTP-distributed task management via Horde
 - Per-request webhooks for real-time notifications
 - Circuit breaker and backpressure patterns
 - Push notifications with HMAC/JWT/Token auth
 - Erlang clustering support (gossip, DNS, Kubernetes)
-- 230+ tests with comprehensive coverage
+- 430+ tests with comprehensive coverage
 
 ---
 
-## Phase 1 – Core Stability (Current)
+## Phase 1 – Core Stability ✅ Complete
 
-**Story:** *"I want to deploy SuperX and have it just work – no database setup, no external dependencies. Start the server and go."*
+**Story:** *"I want to deploy SuperX and have it reliably persist tasks and agents while maintaining sub-millisecond read performance."*
 
-**Goal**: Stable experimental gateway with zero external dependencies.
+**Goal**: Stable gateway with hybrid persistence (PostgreSQL + ETS caching).
 
 | Task | Status | Description |
 |------|--------|-------------|
-| Pure OTP task storage | ✅ Done | Horde-based distributed in-memory storage |
+| Hybrid PostgreSQL + ETS | ✅ Done | Write-through cache with sub-ms reads |
 | Per-request webhooks | ✅ Done | Webhook URLs in request metadata |
 | SSE streaming | ✅ Done | Real-time task updates via Server-Sent Events |
 | Circuit breaker | ✅ Done | Automatic failure detection and recovery |
 | Clustering support | ✅ Done | Multi-node via gossip, DNS, Kubernetes |
-| Remove PostgreSQL | ✅ Done | Simplified to pure OTP architecture |
+| Terminal state protection | ✅ Done | Completed/failed/canceled tasks immutable |
 
 ---
 
@@ -199,11 +200,15 @@ Natural language agent selection without knowing skill names:
 
 | Task | Status | Description |
 |------|--------|-----------|
+| MCP Protocol Support | 📋 Planned | Full MCP v2024-11-05 implementation |
+| MCP HTTP Transport | 📋 Planned | Streamable HTTP and SSE for remote servers |
+| MCP STDIO Transport | 📋 Planned | Local MCP server processes |
+| MCP Docker Transport | 📋 Planned | Containerized MCP servers |
+| MCP Session Management | 📋 Planned | Stateful GenServer per MCP connection |
 | Protocol plugin system | 📋 Planned | Support for custom protocol adapters |
 | Tool provider abstraction | 📋 Planned | Pluggable tool/resource providers |
 | Agent SDK | 📋 Planned | Helper library for building A2A agents |
-| Protocol adapters | 📋 Planned | Extensible protocol architecture |
-| Custom transport support | 📋 Planned | Support for non-HTTP transports |
+| Custom transport support | 📋 Planned | Support for additional transports |
 
 ### MCP Integration Architecture
 
@@ -272,9 +277,9 @@ Natural language agent selection without knowing skill names:
 We welcome contributions! See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
 
 Priority areas:
-1. **MCP integration** - Tool access via Model Context Protocol
-2. **Smart routing** - Skill-based agent selection
-3. **Observability** - Metrics and tracing
+1. **Smart routing** - Skill-based agent selection
+2. **Observability** - Metrics and tracing
+3. **Enterprise features** - Rate limiting and multi-tenancy
 
 ---
 

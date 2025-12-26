@@ -110,11 +110,11 @@ If AI agents are like **specialized employees**, SuperX is the **shared infrastr
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/superx.git
+git clone https://github.com/alfinjohnson/superx.git
 cd superx
 
-# Start the orchestrator
-docker compose up -d orchestrator
+# Start PostgreSQL and the orchestrator
+docker compose up -d
 
 # Check health
 curl http://localhost:4000/health
@@ -123,14 +123,20 @@ curl http://localhost:4000/health
 docker compose logs -f orchestrator
 ```
 
-### Development Mode (In-Memory)
+### Development Mode
 
 ```bash
 cd orchestrator
 mix deps.get
 mix compile
 
-# Run with in-memory storage (no database required)
+# Start PostgreSQL (if not running)
+docker compose up -d postgres
+
+# Run database migrations
+mix ecto.setup
+
+# Start the server
 mix run --no-halt
 ```
 
@@ -284,17 +290,17 @@ curl -X POST http://localhost:4000/rpc \
 
 ### Storage
 
-SuperX uses **OTP-distributed in-memory storage** via Horde. No external database required to start.
+SuperX uses a **hybrid PostgreSQL + ETS caching** architecture for durability with fast reads.
 
 | Aspect | Details |
-|--------|---------|
-| **Zero External Dependencies** | Start immediately, no PostgreSQL/Redis setup |
-| **Distributed by Default** | Tasks replicated across cluster nodes via OTP |
-| **Low Latency** | In-memory access, microsecond response times |
-| **Ephemeral** | Tasks lost on full cluster restart (acceptable for stateless agent workflows) |
-| **Scale Up** | Add more Erlang nodes to the cluster horizontally |
+|--------|--------|
+| **Write-Through Cache** | All writes go to PostgreSQL first, then ETS cache |
+| **Sub-Millisecond Reads** | ETS cache provides ~0.5ms read latency |
+| **Durable Storage** | PostgreSQL ensures data survives restarts |
+| **Automatic Cache Warming** | Cache populated from database on startup |
+| **Distributed Ready** | Horde for distributed registry and supervisor |
 
-> **Note:** For audit/compliance requiring persistent storage, forward task events to your own data store via webhooks. (Full database persistence coming in Phase 4+.)
+> **Note:** PostgreSQL is required for production deployments. The ETS cache provides fast reads while PostgreSQL ensures durability.
 
 ### Docker
 
@@ -313,6 +319,7 @@ Key environment variables:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | 4000 | HTTP server port |
+| `DATABASE_URL` | — | PostgreSQL connection URL |
 | `AGENTS_FILE` | — | Path to agents YAML configuration |
 | `CLUSTER_STRATEGY` | — | Clustering: `gossip`, `dns`, `kubernetes` |
 | `SECRET_KEY_BASE` | — | Secret key for cryptographic operations (required in prod) |
@@ -322,19 +329,21 @@ Key environment variables:
 ```bash
 # Set required environment variables
 export PORT=4000
+export DATABASE_URL=ecto://user:pass@host/superx_prod
 export AGENTS_FILE=/etc/superx/agents.yml
 export SECRET_KEY_BASE=$(openssl rand -base64 64)
 
 # Pull and run
-docker pull ghcr.io/alfinjohnson/superx:latest
+docker pull ghcr.io/anthropics/superx:latest
 docker run -d \
   --name superx \
   -p 4000:4000 \
   -e PORT \
+  -e DATABASE_URL \
   -e AGENTS_FILE \
   -e SECRET_KEY_BASE \
   -v /etc/superx/agents.yml:/home/app/agents.yml:ro \
-  ghcr.io/alfinjohnson/superx:latest
+  ghcr.io/anthropics/superx:latest
 ```
 
 ## Agent Configuration
@@ -359,7 +368,8 @@ Mount the file and set `AGENTS_FILE`:
 docker run -d \
   -v ./agents.yml:/home/app/agents.yml:ro \
   -e AGENTS_FILE=/home/app/agents.yml \
-  ghcr.io/alfinjohnson/superx:latest
+  -e DATABASE_URL=ecto://user:pass@host/superx \
+  ghcr.io/anthropics/superx:latest
 ```
 
 ### Runtime Agent Management
@@ -396,16 +406,19 @@ superx/
 ├── orchestrator/           # Main Elixir application
 │   ├── lib/               # Source code
 │   │   └── orchestrator/  # Core modules
-│   │       ├── agent/     # Agent management (Store, Loader, Worker)
-│   │       ├── task/      # Task management (Store, Streaming)
+│   │       ├── agent/     # Agent management (Store with ETS+PostgreSQL)
+│   │       ├── task/      # Task management (Store, PubSub, Streaming)
+│   │       ├── schema/    # Ecto schemas (Task, Agent, PushConfig)
 │   │       ├── protocol/  # Protocol implementations
 │   │       │   └── a2a/   # A2A protocol (Adapter, Proxy, PushNotifier)
-│   │       └── web/       # Web layer (Router, Streaming, AgentCard)
-│   └── test/              # Test suite (500+ tests)
+│   │       └── web/       # Web layer (Router, Streaming, Handlers)
+│   ├── priv/db/           # Database migrations
+│   └── test/              # Test suite (430+ tests)
 │       ├── protocol/      # Protocol-specific tests
 │       └── stress/        # Stress and performance tests
-├── docs/                  # Protocol documentation
-│   └── a2a-v030/         # A2A v0.3.0 specification
+├── docs/                  # Documentation
+│   ├── a2a-v030/         # A2A v0.3.0 specification
+│   └── roadmap.md        # Development roadmap
 ├── samples/              # Sample configurations
 │   └── agents.yml        # Example agent configuration
 └── docker-compose.yml    # Local development setup
@@ -440,11 +453,13 @@ Built with **Elixir and OTP** — designed for exactly what we need: long-runnin
 | Component | Technology |
 |-----------|------------|
 | **Runtime** | Elixir 1.19+ / OTP 28+ (lightweight, concurrent, distributed) |
+| **Database** | PostgreSQL 15+ with Ecto (durable storage) |
+| **Caching** | ETS (sub-millisecond reads, write-through cache) |
 | **HTTP Server** | Bandit (fast, Plug-compatible, streaming support) |
 | **Distributed State** | Horde (distributed registry, supervisor) |
 | **Clustering** | libcluster (gossip, DNS, Kubernetes) |
-| **Container** | Docker (multi-stage build, ~65MB image) |
-| **Testing** | ExUnit (500+ tests, high coverage) |
+| **Container** | Docker (multi-stage build) |
+| **Testing** | ExUnit (430+ tests, high coverage) |
 
 ## Contributing
 
