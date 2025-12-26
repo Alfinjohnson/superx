@@ -59,17 +59,25 @@ defmodule Orchestrator.MixProject do
       # Clustering & Distribution
       {:libcluster, "~> 3.3"},
       {:horde, "~> 0.9"},
+      # Database (optional - for production mode)
+      {:ecto_sql, "~> 3.11"},
+      {:postgrex, "~> 0.17"},
+      {:ecto_psql_extras, "~> 0.7"},
       # Testing
       {:mox, "~> 1.1", only: :test},
-      {:excoveralls, "~> 0.18", only: :test}
+      {:excoveralls, "~> 0.18", only: :test},
+      {:ex_machina, "~> 2.7", only: :test}
     ]
   end
 
   defp aliases do
     # Tests run in memory mode by default (no DB needed)
+    # Use MIX_ENV=postgres_test mix test for PostgreSQL tests
     [
       setup: ["deps.get"],
-      test: ["test"]
+      test: ["test"],
+      "ecto.setup": ["ecto.create", "ecto.migrate"],
+      "ecto.reset": ["ecto.drop", "ecto.setup"]
     ]
   end
 

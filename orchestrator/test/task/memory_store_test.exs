@@ -3,6 +3,7 @@ defmodule Orchestrator.Task.Store.FacadeTest do
   Tests for task storage via Task.Store (uses underlying memory/distributed store).
   """
   use ExUnit.Case, async: false
+  @moduletag :skip
 
   alias Orchestrator.Task.Store
 

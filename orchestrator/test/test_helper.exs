@@ -1,6 +1,12 @@
 # Configure ExUnit
-# All tests run in memory mode (hybrid)
-ExUnit.start()
+# Tests use PostgreSQL with Ecto sandbox for isolation
+ExUnit.start(exclude: [:skip])
+
+# Start application supervision tree (Repo + cached stores). HTTP server is disabled in tests.
+{:ok, _} = Application.ensure_all_started(:orchestrator)
+
+# Configure Ecto sandbox - use shared mode so global GenServers can access the connection
+Ecto.Adapters.SQL.Sandbox.mode(Orchestrator.Repo, {:shared, self()})
 
 # Define Mox mocks
 Mox.defmock(Orchestrator.MockHttpClient, for: Orchestrator.HttpClient.Behaviour)

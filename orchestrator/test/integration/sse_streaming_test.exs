@@ -6,7 +6,7 @@ defmodule Orchestrator.Integration.SSEStreamingTest do
   handles real HTTP connections, streaming responses, and error conditions.
   """
 
-  use ExUnit.Case, async: false
+  use Orchestrator.DataCase, async: false
 
   alias Orchestrator.Infra.SSEClient
   alias Orchestrator.Task.Store, as: TaskStore
@@ -212,9 +212,6 @@ defmodule Orchestrator.Integration.SSEStreamingTest do
     :exit, _ -> :ok
   end
 
-  defp unique_id do
-    :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
-  end
 end
 
 defmodule SSETestPlug do

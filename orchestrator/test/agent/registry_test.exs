@@ -2,7 +2,7 @@ defmodule Orchestrator.Agent.RegistryTest do
   @moduledoc """
   Tests for Agent.Registry - distributed process registry.
   """
-  use ExUnit.Case, async: false
+  use Orchestrator.DataCase, async: false
 
   alias Orchestrator.Agent.Registry
 
@@ -27,7 +27,7 @@ defmodule Orchestrator.AgentRegistry.DistributedTest do
   @moduledoc """
   Tests for backward-compatible AgentRegistry.Distributed module.
   """
-  use ExUnit.Case, async: false
+  use Orchestrator.DataCase, async: false
 
   alias Orchestrator.AgentRegistry.Distributed
 

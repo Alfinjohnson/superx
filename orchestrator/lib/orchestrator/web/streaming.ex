@@ -75,7 +75,7 @@ defmodule Orchestrator.Web.Streaming do
   @spec loop_task_events(Plug.Conn.t(), any(), String.t()) :: Plug.Conn.t()
   def loop_task_events(conn, rpc_id, task_id) do
     receive do
-      {:task_update, task} ->
+      {update_type, task} when update_type in [:task_update, :status_update, :artifact_update] ->
         {:ok, conn} = send_event(conn, %{jsonrpc: "2.0", id: rpc_id, result: task})
 
         if Utils.terminal_state?(get_in(task, ["status", "state"])) do

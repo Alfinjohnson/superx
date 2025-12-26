@@ -22,6 +22,7 @@ defmodule Orchestrator.Factory do
     %{
       "id" => "task-#{unique_id()}",
       "contextId" => "ctx-#{unique_id()}",
+      "agentId" => "agent-#{unique_id()}",
       "status" => %{"state" => "submitted"},
       "artifacts" => [],
       "history" => [],

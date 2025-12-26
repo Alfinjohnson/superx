@@ -2,17 +2,28 @@ defmodule Orchestrator.Task.PushConfigTest do
   @moduledoc """
   Tests for Task.PushConfig - push notification configuration facade.
   """
-  use ExUnit.Case, async: false
+  use Orchestrator.DataCase, async: false
 
   alias Orchestrator.Task.PushConfig
+  alias Orchestrator.Task.Store, as: TaskStore
 
   setup do
     task_id = "push-config-#{:rand.uniform(100_000)}"
+
+    # Create task first (required for FK constraint)
+    task = %{
+      "id" => task_id,
+      "status" => %{"state" => "working"}
+    }
+
+    :ok = TaskStore.put(task)
 
     on_exit(fn ->
       # Clean up configs
       PushConfig.list(task_id)
       |> Enum.each(fn cfg -> PushConfig.delete(task_id, cfg["id"]) end)
+
+      TaskStore.delete(task_id)
     end)
 
     {:ok, task_id: task_id}

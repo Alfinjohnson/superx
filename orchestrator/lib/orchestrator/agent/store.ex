@@ -40,15 +40,17 @@ defmodule Orchestrator.Agent.Store do
   def list, do: adapter().list()
 
   @doc "Create or update an agent. Agent must have 'id' and 'url' fields."
-  @spec upsert(map()) :: {:ok, map()} | {:error, :invalid}
+  @spec upsert(map()) :: {:ok, map()} | {:error, :invalid} | {:error, term()}
   def upsert(%{"id" => id, "url" => url} = agent) do
     opts = %{
       "bearer" => Map.get(agent, "bearer"),
       "metadata" => Map.get(agent, "metadata", %{})
     }
 
-    adapter().put(id, url, opts)
-    {:ok, agent}
+    case adapter().put(id, url, opts) do
+      {:ok, stored_agent} -> {:ok, stored_agent}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   def upsert(%{id: id, url: url} = agent) do

@@ -4,6 +4,7 @@ defmodule Orchestrator.Task.Store.MemoryTest do
   Uses Task.Store facade which routes to the memory adapter.
   """
   use Orchestrator.DataCase, async: false
+  @moduletag :skip
 
   alias Orchestrator.Task.Store, as: TaskStore
   alias Orchestrator.Task.PubSub

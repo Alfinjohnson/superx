@@ -2,7 +2,7 @@ defmodule Orchestrator.Agent.SupervisorTest do
   @moduledoc """
   Tests for Agent.Supervisor - distributed worker supervision.
   """
-  use ExUnit.Case, async: false
+  use Orchestrator.DataCase, async: false
 
   alias Orchestrator.Agent.Supervisor, as: AgentSupervisor
   alias Orchestrator.Agent.Store, as: AgentStore
@@ -120,7 +120,7 @@ defmodule Orchestrator.AgentSupervisorCompatTest do
   @moduledoc """
   Tests for backward-compatible AgentSupervisor alias.
   """
-  use ExUnit.Case, async: false
+  use Orchestrator.DataCase, async: false
 
   alias Orchestrator.AgentSupervisor
 

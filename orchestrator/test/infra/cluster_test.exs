@@ -2,7 +2,7 @@ defmodule Orchestrator.Infra.ClusterTest do
   @moduledoc """
   Tests for Infra.Cluster - cluster status and load balancing.
   """
-  use ExUnit.Case, async: false
+  use Orchestrator.DataCase, async: false
 
   alias Orchestrator.Infra.Cluster
 

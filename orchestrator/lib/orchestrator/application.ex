@@ -21,12 +21,10 @@ defmodule Orchestrator.Application do
         {Orchestrator.Agent.Supervisor, []},
 
         # PubSub for task notifications
-        Orchestrator.Task.PubSub,
-
-        # HTTP server
-        {Plug.Cowboy, scheme: :http, plug: Orchestrator.Router, options: [port: port()]}
+        Orchestrator.Task.PubSub
       ]
       |> prepend_persistence_children()
+      |> maybe_add_http()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
@@ -45,16 +43,26 @@ defmodule Orchestrator.Application do
     result
   end
 
-  # Add persistence-specific children based on mode
+  # Add persistence children (PostgreSQL + ETS cache)
   defp prepend_persistence_children(children) do
-    # Memory mode: start ETS-backed stores
     persistence_children = [
-      Orchestrator.Task.Store.Distributed,
-      Orchestrator.Agent.Store.Memory,
-      Orchestrator.Task.PushConfig.Memory
+      # PostgreSQL repository
+      Orchestrator.Repo,
+      # Cached stores (write-through: PostgreSQL + ETS)
+      Orchestrator.Task.Store.CachedPostgres,
+      Orchestrator.Agent.Store.CachedPostgres,
+      Orchestrator.Task.PushConfig.CachedPostgres
     ]
 
     persistence_children ++ children
+  end
+
+  defp maybe_add_http(children) do
+    if Application.get_env(:orchestrator, :start_http, true) do
+      children ++ [{Plug.Cowboy, scheme: :http, plug: Orchestrator.Router, options: [port: port()]}]
+    else
+      children
+    end
   end
 
   defp port do

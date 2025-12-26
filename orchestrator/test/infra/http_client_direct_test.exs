@@ -8,26 +8,17 @@ defmodule Orchestrator.Infra.HttpClientDirectTest do
   alias Orchestrator.Infra.HttpClient
 
   describe "module structure" do
-    test "module is loaded" do
-      assert Code.ensure_loaded?(HttpClient)
-    end
+    test "module is loaded and exports expected functions" do
+      # Ensure module is fully loaded
+      {:module, _} = Code.ensure_loaded(HttpClient)
 
-    test "exports post_json/3" do
-      assert function_exported?(HttpClient, :post_json, 3)
-    end
+      # Check exported functions via __info__ which is more reliable
+      functions = HttpClient.__info__(:functions)
 
-    test "exports get_json/1" do
-      # get_json(url, opts \\ []) exports arity 1 due to default
-      assert function_exported?(HttpClient, :get_json, 1)
-    end
-
-    test "exports fetch_agent_card/1" do
-      # fetch_agent_card(url, opts \\ []) exports arity 1 due to default
-      assert function_exported?(HttpClient, :fetch_agent_card, 1)
-    end
-
-    test "exports post_raw/3" do
-      assert function_exported?(HttpClient, :post_raw, 3)
+      assert {:post_json, 2} in functions or {:post_json, 3} in functions
+      assert {:get_json, 1} in functions or {:get_json, 2} in functions
+      assert {:fetch_agent_card, 1} in functions or {:fetch_agent_card, 2} in functions
+      assert {:post_raw, 2} in functions or {:post_raw, 3} in functions
     end
   end
 

@@ -2,7 +2,7 @@ defmodule Orchestrator.Task.StoreTest do
   @moduledoc """
   Tests for the Task.Store module.
   """
-  use ExUnit.Case, async: false
+  use Orchestrator.DataCase, async: false
 
   alias Orchestrator.Task.Store
 
@@ -256,8 +256,5 @@ defmodule Orchestrator.Task.StoreTest do
     end
   end
 
-  # Helper
-  defp unique_id do
-    :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
-  end
+
 end

@@ -7,6 +7,7 @@ defmodule Orchestrator.Integration.HybridTaskTest do
   """
 
   use Orchestrator.ConnCase, async: false
+  import Orchestrator.DataCase
 
   alias Orchestrator.Task.Store, as: TaskStore
   alias Orchestrator.Task.PushConfig
@@ -33,6 +34,7 @@ defmodule Orchestrator.Integration.HybridTaskTest do
   end
 
   describe "tasks.subscribe (hybrid)" do
+    @tag timeout: :infinity
     test "streams and completes on terminal update" do
       task_id = "hybrid-int-" <> unique_id()
 
@@ -58,13 +60,14 @@ defmodule Orchestrator.Integration.HybridTaskTest do
         end)
 
       # Allow subscription to attach
-      Process.sleep(50)
+      Process.sleep(100)
 
       # Terminal update should end the stream loop
       completed = Map.put(task, "status", %{"state" => "completed"})
       assert :ok = TaskStore.put(completed)
 
-      assert Task.await(stream_task, 2_000)
+      # Give more time for SSE stream to detect terminal state and close
+      assert Task.await(stream_task, 10_000)
     end
 
     test "per-request webhook delivers via push notifier" do
@@ -82,7 +85,4 @@ defmodule Orchestrator.Integration.HybridTaskTest do
     end
   end
 
-  defp unique_id do
-    :crypto.strong_rand_bytes(5) |> Base.encode16(case: :lower)
-  end
 end

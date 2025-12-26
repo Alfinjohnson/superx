@@ -3,22 +3,37 @@ defmodule Orchestrator.DataCase do
   This module defines the setup for tests requiring
   access to the application's data layer.
 
-  You may define functions here to be used as helpers in
-  your tests.
+  Uses Ecto.Adapters.SQL.Sandbox for database isolation between tests.
   """
 
   use ExUnit.CaseTemplate
 
   using do
     quote do
+      import Ecto.Query
       import Orchestrator.DataCase
       import Orchestrator.Factory
+
+      alias Orchestrator.Repo
     end
   end
 
-  setup _tags do
-    # Memory mode: ETS tables are managed by the stores
-    # No special cleanup needed as tests use fresh app state
+  setup tags do
+    setup_persistence(tags)
+  end
+
+  @doc """
+  Ensure persistence processes are running and checkout a sandbox owner.
+
+  Used by both DataCase tests and ConnCase tests.
+  """
+  def setup_persistence(_tags) do
+    # Start the application (Repo + caches + pubsub) if not already running
+    {:ok, _} = Application.ensure_all_started(:orchestrator)
+
+    # Check out a connection for this test - shared mode already set in test_helper
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Orchestrator.Repo)
+
     :ok
   end
 
@@ -29,10 +44,10 @@ defmodule Orchestrator.DataCase do
     :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
   end
 
-  @doc """
-  Setup persistence for tests. In memory-only mode, this is a no-op.
-  """
-  def setup_persistence(_tags) do
-    :ok
+  defp ensure_started(module) do
+    case Process.whereis(module) do
+      nil -> start_supervised!(module)
+      _pid -> :ok
+    end
   end
 end

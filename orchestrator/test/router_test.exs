@@ -76,16 +76,19 @@ defmodule Orchestrator.RouterTest do
 
   describe "POST /rpc - agents.get" do
     test "returns agent by id" do
-      AgentStore.upsert(%{
-        "id" => "my-agent",
-        "url" => "http://localhost:4001/rpc"
-      })
+      uid = :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
+
+      {:ok, _} =
+        AgentStore.upsert(%{
+          "id" => "my-agent-#{uid}",
+          "url" => "http://localhost:4001/rpc/#{uid}"
+        })
 
       request = %{
         "jsonrpc" => "2.0",
         "id" => "1",
         "method" => "agents.get",
-        "params" => %{"id" => "my-agent"}
+        "params" => %{"id" => "my-agent-#{uid}"}
       }
 
       conn = json_post("/rpc", request)
@@ -93,8 +96,8 @@ defmodule Orchestrator.RouterTest do
       assert conn.status == 200
       response = Jason.decode!(conn.resp_body)
 
-      assert response["result"]["id"] == "my-agent"
-      assert response["result"]["url"] == "http://localhost:4001/rpc"
+      assert response["result"]["id"] == "my-agent-#{uid}"
+      assert response["result"]["url"] == "http://localhost:4001/rpc/#{uid}"
     end
 
     test "returns error for non-existent agent" do

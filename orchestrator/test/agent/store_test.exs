@@ -24,9 +24,10 @@ defmodule Orchestrator.Agent.StoreTest do
 
   describe "upsert/1" do
     test "creates new agent with id and url" do
+      uid = unique_id()
       agent = %{
-        "id" => "test-agent-#{unique_id()}",
-        "url" => "http://localhost:4001/rpc"
+        "id" => "test-agent-#{uid}",
+        "url" => "http://localhost:4001/rpc/#{uid}"
       }
 
       assert {:ok, saved} = AgentStore.upsert(agent)
@@ -35,9 +36,10 @@ defmodule Orchestrator.Agent.StoreTest do
     end
 
     test "creates agent with bearer token" do
+      uid = unique_id()
       agent = %{
-        "id" => "test-agent-#{unique_id()}",
-        "url" => "http://localhost:4001/rpc",
+        "id" => "test-agent-#{uid}",
+        "url" => "http://localhost:4001/rpc/#{uid}",
         "bearer" => "test-token"
       }
 
@@ -46,9 +48,10 @@ defmodule Orchestrator.Agent.StoreTest do
     end
 
     test "creates agent with metadata" do
+      uid = unique_id()
       agent = %{
-        "id" => "test-agent-#{unique_id()}",
-        "url" => "http://localhost:4001/rpc",
+        "id" => "test-agent-#{uid}",
+        "url" => "http://localhost:4001/rpc/#{uid}",
         "metadata" => %{
           "protocol" => "a2a",
           "protocolVersion" => "0.3.0"
@@ -60,30 +63,32 @@ defmodule Orchestrator.Agent.StoreTest do
     end
 
     test "updates existing agent" do
-      agent_id = "test-agent-#{unique_id()}"
+      uid = unique_id()
+      agent_id = "test-agent-#{uid}"
 
       original = %{
         "id" => agent_id,
-        "url" => "http://localhost:4001/rpc"
+        "url" => "http://localhost:4001/rpc/#{uid}"
       }
 
       assert {:ok, _} = AgentStore.upsert(original)
 
       updated = %{
         "id" => agent_id,
-        "url" => "http://localhost:5001/rpc",
+        "url" => "http://localhost:5001/rpc/#{uid}",
         "bearer" => "new-token"
       }
 
       assert {:ok, saved} = AgentStore.upsert(updated)
-      assert saved["url"] == "http://localhost:5001/rpc"
+      assert saved["url"] == "http://localhost:5001/rpc/#{uid}"
       assert saved["bearer"] == "new-token"
     end
 
     test "accepts atom keys" do
+      uid = unique_id()
       agent = %{
-        id: "test-agent-#{unique_id()}",
-        url: "http://localhost:4001/rpc"
+        id: "test-agent-#{uid}",
+        url: "http://localhost:4001/rpc/#{uid}"
       }
 
       assert {:ok, saved} = AgentStore.upsert(agent)
@@ -91,7 +96,7 @@ defmodule Orchestrator.Agent.StoreTest do
     end
 
     test "returns error for agent without id" do
-      agent = %{"url" => "http://localhost:4001/rpc"}
+      agent = %{"url" => "http://localhost:4001/rpc/invalid-no-id"}
       assert {:error, :invalid} = AgentStore.upsert(agent)
     end
   end
@@ -102,14 +107,15 @@ defmodule Orchestrator.Agent.StoreTest do
     end
 
     test "returns agent after upsert" do
-      agent_id = "test-agent-#{unique_id()}"
-      agent = %{"id" => agent_id, "url" => "http://test.local"}
+      uid = unique_id()
+      agent_id = "test-agent-#{uid}"
+      agent = %{"id" => agent_id, "url" => "http://test-#{uid}.local"}
 
       {:ok, _} = AgentStore.upsert(agent)
 
       fetched = AgentStore.fetch(agent_id)
       assert fetched["id"] == agent_id
-      assert fetched["url"] == "http://test.local"
+      assert fetched["url"] == "http://test-#{uid}.local"
     end
   end
 
@@ -122,8 +128,10 @@ defmodule Orchestrator.Agent.StoreTest do
     end
 
     test "returns upserted agents" do
-      agent1 = %{"id" => "agent-1-#{unique_id()}", "url" => "http://a1.local"}
-      agent2 = %{"id" => "agent-2-#{unique_id()}", "url" => "http://a2.local"}
+      uid1 = unique_id()
+      uid2 = unique_id()
+      agent1 = %{"id" => "agent-1-#{uid1}", "url" => "http://a1-#{uid1}.local"}
+      agent2 = %{"id" => "agent-2-#{uid2}", "url" => "http://a2-#{uid2}.local"}
 
       {:ok, _} = AgentStore.upsert(agent1)
       {:ok, _} = AgentStore.upsert(agent2)
@@ -138,8 +146,9 @@ defmodule Orchestrator.Agent.StoreTest do
 
   describe "delete/1" do
     test "removes agent by id" do
-      agent_id = "test-agent-#{unique_id()}"
-      agent = %{"id" => agent_id, "url" => "http://test.local"}
+      uid = unique_id()
+      agent_id = "test-agent-#{uid}"
+      agent = %{"id" => agent_id, "url" => "http://test-#{uid}.local"}
 
       {:ok, _} = AgentStore.upsert(agent)
       assert AgentStore.fetch(agent_id) != nil

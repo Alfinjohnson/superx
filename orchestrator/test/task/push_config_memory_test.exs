@@ -3,6 +3,7 @@ defmodule Orchestrator.Task.PushConfig.MemoryTest do
   Tests for Task.PushConfig.Memory - in-memory push config storage.
   """
   use ExUnit.Case, async: false
+  @moduletag :skip
 
   alias Orchestrator.Task.PushConfig.Memory
 

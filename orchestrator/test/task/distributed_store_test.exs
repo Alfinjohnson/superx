@@ -1,5 +1,5 @@
 defmodule Orchestrator.Task.DistributedStoreTest do
-  use ExUnit.Case, async: false
+  use Orchestrator.DataCase, async: false
 
   alias Orchestrator.Task.Store, as: TaskStore
   alias Orchestrator.Task.PubSub, as: TaskPubSub
@@ -39,7 +39,4 @@ defmodule Orchestrator.Task.DistributedStoreTest do
     end
   end
 
-  defp unique_id do
-    :crypto.strong_rand_bytes(6) |> Base.encode16(case: :lower)
-  end
 end
