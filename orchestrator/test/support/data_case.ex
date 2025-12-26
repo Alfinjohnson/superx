@@ -43,11 +43,4 @@ defmodule Orchestrator.DataCase do
   def unique_id do
     :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
   end
-
-  defp ensure_started(module) do
-    case Process.whereis(module) do
-      nil -> start_supervised!(module)
-      _pid -> :ok
-    end
-  end
 end
