@@ -255,6 +255,4 @@ defmodule Orchestrator.Task.StoreTest do
       assert Store.subscribe("non-existent") == nil
     end
   end
-
-
 end

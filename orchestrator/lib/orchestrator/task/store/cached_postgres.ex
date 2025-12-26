@@ -180,7 +180,11 @@ defmodule Orchestrator.Task.Store.CachedPostgres do
         case put(merged) do
           :ok ->
             TaskPubSub.broadcast(task_id, {:artifact_update, merged})
-            PushConfig.deliver_event(task_id, %{"artifactUpdate" => %{"taskId" => task_id, "artifact" => artifact}})
+
+            PushConfig.deliver_event(task_id, %{
+              "artifactUpdate" => %{"taskId" => task_id, "artifact" => artifact}
+            })
+
             :ok
 
           error ->

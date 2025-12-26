@@ -12,15 +12,15 @@ defmodule Orchestrator.Schema.Task do
   @foreign_key_type :string
 
   schema "tasks" do
-    field :status, :map
-    field :message, :map
-    field :context_id, :string
-    field :agent_id, :string
-    field :result, :map
-    field :artifacts, {:array, :map}, default: []
-    field :metadata, :map, default: %{}
+    field(:status, :map)
+    field(:message, :map)
+    field(:context_id, :string)
+    field(:agent_id, :string)
+    field(:result, :map)
+    field(:artifacts, {:array, :map}, default: [])
+    field(:metadata, :map, default: %{})
 
-    has_many :push_configs, Orchestrator.Schema.PushConfig, foreign_key: :task_id
+    has_many(:push_configs, Orchestrator.Schema.PushConfig, foreign_key: :task_id)
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -59,7 +59,8 @@ defmodule Orchestrator.Schema.Task do
 
   defp validate_status(changeset) do
     case get_field(changeset, :status) do
-      %{"state" => state} when state in ["submitted", "working", "completed", "failed", "canceled"] ->
+      %{"state" => state}
+      when state in ["submitted", "working", "completed", "failed", "canceled"] ->
         changeset
 
       %{"state" => _} ->

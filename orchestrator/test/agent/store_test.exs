@@ -25,6 +25,7 @@ defmodule Orchestrator.Agent.StoreTest do
   describe "upsert/1" do
     test "creates new agent with id and url" do
       uid = unique_id()
+
       agent = %{
         "id" => "test-agent-#{uid}",
         "url" => "http://localhost:4001/rpc/#{uid}"
@@ -37,6 +38,7 @@ defmodule Orchestrator.Agent.StoreTest do
 
     test "creates agent with bearer token" do
       uid = unique_id()
+
       agent = %{
         "id" => "test-agent-#{uid}",
         "url" => "http://localhost:4001/rpc/#{uid}",
@@ -49,6 +51,7 @@ defmodule Orchestrator.Agent.StoreTest do
 
     test "creates agent with metadata" do
       uid = unique_id()
+
       agent = %{
         "id" => "test-agent-#{uid}",
         "url" => "http://localhost:4001/rpc/#{uid}",
@@ -86,6 +89,7 @@ defmodule Orchestrator.Agent.StoreTest do
 
     test "accepts atom keys" do
       uid = unique_id()
+
       agent = %{
         id: "test-agent-#{uid}",
         url: "http://localhost:4001/rpc/#{uid}"

@@ -211,7 +211,6 @@ defmodule Orchestrator.Integration.SSEStreamingTest do
   catch
     :exit, _ -> :ok
   end
-
 end
 
 defmodule SSETestPlug do

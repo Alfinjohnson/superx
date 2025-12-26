@@ -84,5 +84,4 @@ defmodule Orchestrator.Integration.HybridTaskTest do
       assert cfg["url"] == webhook["url"]
     end
   end
-
 end

@@ -59,7 +59,8 @@ defmodule Orchestrator.Application do
 
   defp maybe_add_http(children) do
     if Application.get_env(:orchestrator, :start_http, true) do
-      children ++ [{Plug.Cowboy, scheme: :http, plug: Orchestrator.Router, options: [port: port()]}]
+      children ++
+        [{Plug.Cowboy, scheme: :http, plug: Orchestrator.Router, options: [port: port()]}]
     else
       children
     end

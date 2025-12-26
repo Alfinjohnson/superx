@@ -38,5 +38,4 @@ defmodule Orchestrator.Task.DistributedStoreTest do
       assert artifact["name"] == "result"
     end
   end
-
 end

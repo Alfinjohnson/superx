@@ -11,10 +11,10 @@ defmodule Orchestrator.Schema.Agent do
   @primary_key {:id, :string, autogenerate: false}
 
   schema "agents" do
-    field :url, :string
-    field :bearer, :string
-    field :protocol, :string, default: "a2a"
-    field :metadata, :map, default: %{}
+    field(:url, :string)
+    field(:bearer, :string)
+    field(:protocol, :string, default: "a2a")
+    field(:metadata, :map, default: %{})
 
     timestamps(type: :utc_datetime_usec)
   end

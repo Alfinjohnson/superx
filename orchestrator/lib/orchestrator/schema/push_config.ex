@@ -12,15 +12,15 @@ defmodule Orchestrator.Schema.PushConfig do
   @foreign_key_type :string
 
   schema "push_configs" do
-    field :url, :string
-    field :token, :string
-    field :hmac_secret, :string
-    field :jwt_secret, :string
-    field :jwt_issuer, :string
-    field :jwt_audience, :string
-    field :jwt_kid, :string
+    field(:url, :string)
+    field(:token, :string)
+    field(:hmac_secret, :string)
+    field(:jwt_secret, :string)
+    field(:jwt_issuer, :string)
+    field(:jwt_audience, :string)
+    field(:jwt_kid, :string)
 
-    belongs_to :task, Orchestrator.Schema.Task, type: :string
+    belongs_to(:task, Orchestrator.Schema.Task, type: :string)
 
     timestamps(type: :utc_datetime_usec)
   end
